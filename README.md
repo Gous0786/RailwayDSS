@@ -49,6 +49,8 @@ docs/
 
 ## The corridor viewer
 
+![corridor viewer](docs/screenshot.png)
+
 A map of the section with the day's trains moving along it, driven by the real
 timetable. It runs **entirely offline** — no tile server, no API key, no CDN.
 

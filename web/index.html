@@ -4,6 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>PRAVAH — KTV–PSA corridor</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Crect width='16' height='16' fill='%230d1117'/%3E%3Cpath d='M2 12L8 7l6-3' stroke='%2358a6ff' stroke-width='1.6' fill='none'/%3E%3C/svg%3E">
 <link rel="stylesheet" href="vendor/maplibre-gl.css">
 <style>
   :root{
@@ -87,6 +88,17 @@
 
 <script src="vendor/maplibre-gl.js"></script>
 <script>
+function fail(msg){
+  const el = document.getElementById("loading");
+  if (el){ el.style.display="grid"; el.style.padding="24px";
+           el.style.textAlign="center"; el.style.whiteSpace="pre-wrap";
+           el.textContent = String(msg); }
+  console.error(msg);
+}
+window.onerror = (m,src,l,c) => fail("JS error: "+m+"  @"+l+":"+c);
+window.addEventListener("unhandledrejection", e =>
+  fail("unhandled promise: "+((e.reason&&e.reason.message)||e.reason)));
+
 const D = "../data/osm/";
 const ATTRIB = '© OpenStreetMap contributors (ODbL)';
 
@@ -155,10 +167,13 @@ const hhmm = s => {
       J(D+"basemap/coastline.geojson"),
     ]);
   } catch(e){
-    document.getElementById("loading").textContent =
-      "could not load data — serve the repository root, e.g.  python -m http.server 8000  then open /web/  ("+e.message+")";
+    const el = document.getElementById("loading");
+    el.style.padding = "24px"; el.style.textAlign = "center";
+    el.textContent = "could not load data: " + e.message
+      + "  —  serve the repository ROOT (python -m http.server 8000) and open /web/";
     return;
   }
+
 
   const corridor = new Corridor(linref);
   document.getElementById("nday").textContent = replay.day;
@@ -170,29 +185,24 @@ const hhmm = s => {
     geometry:{ type:"Point", coordinates:[s.lon, s.lat] }
   }))};
 
-  const map = new maplibregl.Map({
+  let map;
+  try {
+  map = new maplibregl.Map({
     container:"map",
     attributionControl:{ compact:false, customAttribution:ATTRIB },
     center:[83.80,18.33], zoom:7.6, minZoom:6, maxZoom:15,
     style:{
-      version:8, glyphs:null,
+      version:8,
+      // Only the corridor is in the initial style. The basemap context
+      // layers are several megabytes of GeoJSON and holding up style load
+      // on them leaves the page blank; they are added after load instead.
       sources:{
-        water:{type:"geojson",data:water}, waterways:{type:"geojson",data:waterways},
-        coast:{type:"geojson",data:coast}, roads:{type:"geojson",data:roads},
-        places:{type:"geojson",data:places}, tracks:{type:"geojson",data:tracks},
+        tracks:{type:"geojson",data:tracks},
         stations:{type:"geojson",data:stationsFC},
         trains:{type:"geojson",data:{type:"FeatureCollection",features:[]}},
       },
       layers:[
         {id:"bg",type:"background",paint:{"background-color":"#0d1117"}},
-        {id:"water",type:"fill",source:"water",
-         paint:{"fill-color":"#15283d","fill-opacity":.85}},
-        {id:"waterways",type:"line",source:"waterways",
-         paint:{"line-color":"#1d3a55","line-width":["interpolate",["linear"],["zoom"],7,.4,12,1.6]}},
-        {id:"coast",type:"line",source:"coast",
-         paint:{"line-color":"#1f4060","line-width":1.2}},
-        {id:"roads",type:"line",source:"roads",
-         paint:{"line-color":"#262c36","line-width":["interpolate",["linear"],["zoom"],7,.4,12,2]}},
         {id:"track-casing",type:"line",source:"tracks",
          layout:{"line-cap":"round","line-join":"round"},
          paint:{"line-color":"#0d1117","line-width":["interpolate",["linear"],["zoom"],7,3.5,13,9]}},
@@ -201,8 +211,9 @@ const hhmm = s => {
          paint:{"line-color":["case",["==",["get","usage"],"main"],"#6e7b8b","#49535f"],
                 "line-width":["interpolate",["linear"],["zoom"],7,1.2,13,4]}},
         {id:"station",type:"circle",source:"stations",
-         paint:{"circle-radius":["interpolate",["linear"],["zoom"],7,
-                  ["case",["==",["get","major"],1],3.4,2],13,["case",["==",["get","major"],1],7,4.5]],
+         paint:{"circle-radius":["interpolate",["linear"],["zoom"],
+                  7,["case",["==",["get","major"],1],3.4,2],
+                  13,["case",["==",["get","major"],1],7,4.5]],
                 "circle-color":"#0d1117","circle-stroke-color":"#f0f6fc",
                 "circle-stroke-width":["interpolate",["linear"],["zoom"],7,1,13,2]}},
         {id:"train",type:"circle",source:"trains",
@@ -213,6 +224,7 @@ const hhmm = s => {
       ],
     },
   });
+  } catch(err){ fail("map constructor threw: "+err.message); return; }
 
   /* ---------------- clock ---------------- */
   const span = replay.time_span;
@@ -300,14 +312,45 @@ const hhmm = s => {
     const upd = () => {
       const z = map.getZoom();
       document.querySelectorAll(".stn-label").forEach(el => {
-        el.style.display = (z >= 9.2 || el.classList.contains("major")) ? "" : "none";
+        el.style.display = (z >= 8.6 || el.classList.contains("major")) ? "" : "none";
       });
     };
     map.on("zoom", upd); upd();
   }
 
+  map.on("error", e => fail("map error: " + (e && e.error ? e.error.message : e)));
+
+  // If the style never finishes, say so rather than hanging on "loading".
+  const watchdog = setTimeout(() => {
+    if (!map.loaded()) fail("map did not finish loading - open the browser console (F12) and report the first red error");
+  }, 12000);
+
+  function addContext(){
+    const defs = [
+      ["water", water, {id:"water",type:"fill",source:"water",
+        paint:{"fill-color":"#15283d","fill-opacity":.85}}],
+      ["waterways", waterways, {id:"waterways",type:"line",source:"waterways",
+        paint:{"line-color":"#1d3a55",
+               "line-width":["interpolate",["linear"],["zoom"],7,.4,12,1.6]}}],
+      ["coast", coast, {id:"coast",type:"line",source:"coast",
+        paint:{"line-color":"#1f4060","line-width":1.2}}],
+      ["roads", roads, {id:"roads",type:"line",source:"roads",
+        paint:{"line-color":"#262c36",
+               "line-width":["interpolate",["linear"],["zoom"],7,.4,12,2]}}],
+    ];
+    for (const [id, data, layer] of defs){
+      try {
+        map.addSource(id, {type:"geojson", data});
+        map.addLayer(layer, "track-casing");   // keep context beneath the railway
+      } catch(err){ console.warn("context layer "+id+" skipped:", err.message); }
+    }
+  }
+
   map.on("load", () => {
-    document.getElementById("loading").remove();
+    clearTimeout(watchdog);
+    const el = document.getElementById("loading");
+    if (el) el.remove();
+    addContext();
     map.fitBounds([[83.10,17.80],[84.55,18.85]],{padding:70,duration:0});
     addLabels();
     render();
