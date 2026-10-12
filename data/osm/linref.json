@@ -1,0 +1,160 @@
+{
+  "corridor": "KTV-PSA",
+  "official_km": 176.83,
+  "stations": [
+    {
+      "code": "KTV",
+      "name": "KOTTAVALASA JN.",
+      "cum_km": 0.0,
+      "lat": 17.8909545,
+      "lon": 83.1863609
+    },
+    {
+      "code": "KPL",
+      "name": "KANTAKAPALLE",
+      "cum_km": 7.74,
+      "lat": 17.9549752,
+      "lon": 83.2079688
+    },
+    {
+      "code": "ALM",
+      "name": "ALAMANDA",
+      "cum_km": 16.97,
+      "lat": 18.0120787,
+      "lon": 83.270631
+    },
+    {
+      "code": "KUK",
+      "name": "KORU KONDA",
+      "cum_km": 24.08,
+      "lat": 18.0536846,
+      "lon": 83.3202815
+    },
+    {
+      "code": "VZM",
+      "name": "VIZIANAGARAM JN.",
+      "cum_km": 34.73,
+      "lat": 18.1114637,
+      "lon": 83.396325
+    },
+    {
+      "code": "NML",
+      "name": "NELLIMARLA",
+      "cum_km": 46.47,
+      "lat": 18.1882979,
+      "lon": 83.4593298
+    },
+    {
+      "code": "GVI",
+      "name": "GARIVIDI",
+      "cum_km": 58.8,
+      "lat": 18.2737803,
+      "lon": 83.5312949
+    },
+    {
+      "code": "CPP",
+      "name": "CHIPURUPALLE",
+      "cum_km": 65.37,
+      "lat": 18.3165733,
+      "lon": 83.5689641
+    },
+    {
+      "code": "BTVA",
+      "name": "BATUVA. P.H.",
+      "cum_km": 69.8,
+      "lat": 18.3428511,
+      "lon": 83.6235188
+    },
+    {
+      "code": "SGDM",
+      "name": "SIGADAM",
+      "cum_km": 78.64,
+      "lat": 18.3604848,
+      "lon": 83.6814278
+    },
+    {
+      "code": "PDU",
+      "name": "PONDURU",
+      "cum_km": 88.71,
+      "lat": 18.362788,
+      "lon": 83.7767868
+    },
+    {
+      "code": "DUSI",
+      "name": "DUSI",
+      "cum_km": 97.53,
+      "lat": 18.3702447,
+      "lon": 83.858352
+    },
+    {
+      "code": "CHE",
+      "name": "SRIKAKULAM ROAD",
+      "cum_km": 103.99,
+      "lat": 18.4089715,
+      "lon": 83.9038861
+    },
+    {
+      "code": "ULM",
+      "name": "URLAM",
+      "cum_km": 114.03,
+      "lat": 18.4347141,
+      "lon": 83.9892718
+    },
+    {
+      "code": "TIU",
+      "name": "TILARU",
+      "cum_km": 123.66,
+      "lat": 18.4701721,
+      "lon": 84.072298
+    },
+    {
+      "code": "HCM",
+      "name": "HARISCHANDRAPURAM",
+      "cum_km": 129.09,
+      "lat": 18.4791558,
+      "lon": 84.1215759
+    },
+    {
+      "code": "KBM",
+      "name": "KOTABOMMALI",
+      "cum_km": 137.38,
+      "lat": 18.4880666,
+      "lon": 84.1995843
+    },
+    {
+      "code": "DGB",
+      "name": "DANDU GOPALAPURAM HALT",
+      "cum_km": 145.36,
+      "lat": 18.5444055,
+      "lon": 84.2428537
+    },
+    {
+      "code": "NWP",
+      "name": "NAUPADA JN.",
+      "cum_km": 151.3,
+      "lat": 18.5789153,
+      "lon": 84.283154
+    },
+    {
+      "code": "RMZ",
+      "name": "ROUTHPURAM HALT",
+      "cum_km": 158.31,
+      "lat": 18.6205297,
+      "lon": 84.3352952
+    },
+    {
+      "code": "PUN",
+      "name": "PUNDI",
+      "cum_km": 164.54,
+      "lat": 18.6648529,
+      "lon": 84.3706162
+    },
+    {
+      "code": "PSA",
+      "name": "PALASA",
+      "cum_km": 176.83,
+      "lat": 18.7573816,
+      "lon": 84.4219454
+    }
+  ]
+}

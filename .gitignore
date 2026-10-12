@@ -1,0 +1,29 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+env/
+.pytest_cache/
+.ipynb_checkpoints/
+
+# Word lock files (created when a .docx is open)
+~$*.docx
+~$*.doc
+
+# Scratch / temp
+*.tmp
+docs/_patch.py
+docs/_body.py
+docs/_head.tmp
+
+# Editors / OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
+# NOTE: data/osm/_cache/ is deliberately NOT ignored. The public Overpass
+# endpoints are frequently unavailable, and the cached responses are what
+# make the corridor pipeline reproducible offline.

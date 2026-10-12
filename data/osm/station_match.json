@@ -1,0 +1,247 @@
+{
+  "matched": [
+    {
+      "code": "KTV",
+      "name": "KOTTAVALASA JN.",
+      "osm": {
+        "name": "Kottavalasa Junction",
+        "ref": "KTV",
+        "lat": 17.8909545,
+        "lon": 83.1863609,
+        "railway": "station"
+      }
+    },
+    {
+      "code": "KPL",
+      "name": "KANTAKAPALLE",
+      "osm": {
+        "name": "Kantakpalle",
+        "ref": "KPL",
+        "lat": 17.9549752,
+        "lon": 83.2079688,
+        "railway": "station"
+      }
+    },
+    {
+      "code": "ALM",
+      "name": "ALAMANDA",
+      "osm": {
+        "name": "Alamanda",
+        "ref": "ALM",
+        "lat": 18.0120787,
+        "lon": 83.270631,
+        "railway": "station"
+      }
+    },
+    {
+      "code": "KUK",
+      "name": "KORU KONDA",
+      "osm": {
+        "name": "Korukonda",
+        "ref": "KUK",
+        "lat": 18.0536846,
+        "lon": 83.3202815,
+        "railway": "station"
+      }
+    },
+    {
+      "code": "VZM",
+      "name": "VIZIANAGARAM JN.",
+      "osm": {
+        "name": "Vizianagaram Junction",
+        "ref": "VZM",
+        "lat": 18.1114637,
+        "lon": 83.396325,
+        "railway": "station"
+      }
+    },
+    {
+      "code": "NML",
+      "name": "NELLIMARLA",
+      "osm": {
+        "name": "Nellimarla",
+        "ref": "NML",
+        "lat": 18.1882979,
+        "lon": 83.4593298,
+        "railway": "station"
+      }
+    },
+    {
+      "code": "GVI",
+      "name": "GARIVIDI",
+      "osm": {
+        "name": "Garividi",
+        "ref": "GVI",
+        "lat": 18.2737803,
+        "lon": 83.5312949,
+        "railway": "station"
+      }
+    },
+    {
+      "code": "CPP",
+      "name": "CHIPURUPALLE",
+      "osm": {
+        "name": "Chipurupalle",
+        "ref": "CPP",
+        "lat": 18.3165733,
+        "lon": 83.5689641,
+        "railway": "station"
+      }
+    },
+    {
+      "code": "BTVA",
+      "name": "BATUVA. P.H.",
+      "osm": {
+        "name": "Batuva",
+        "ref": "BTVA",
+        "lat": 18.3428511,
+        "lon": 83.6235188,
+        "railway": "halt"
+      }
+    },
+    {
+      "code": "SGDM",
+      "name": "SIGADAM",
+      "osm": {
+        "name": "Sigadam",
+        "ref": "SGDM",
+        "lat": 18.3604848,
+        "lon": 83.6814278,
+        "railway": "station"
+      }
+    },
+    {
+      "code": "PDU",
+      "name": "PONDURU",
+      "osm": {
+        "name": "Ponduru",
+        "ref": "PDU",
+        "lat": 18.362788,
+        "lon": 83.7767868,
+        "railway": "station"
+      }
+    },
+    {
+      "code": "DUSI",
+      "name": "DUSI",
+      "osm": {
+        "name": "Dusi",
+        "ref": "DUSI",
+        "lat": 18.3702447,
+        "lon": 83.858352,
+        "railway": "station"
+      }
+    },
+    {
+      "code": "CHE",
+      "name": "SRIKAKULAM ROAD",
+      "osm": {
+        "name": "Srikakulam Road",
+        "ref": "CHE",
+        "lat": 18.4089715,
+        "lon": 83.9038861,
+        "railway": "station"
+      }
+    },
+    {
+      "code": "ULM",
+      "name": "URLAM",
+      "osm": {
+        "name": "Urlam",
+        "ref": "ULM",
+        "lat": 18.4347141,
+        "lon": 83.9892718,
+        "railway": "station"
+      }
+    },
+    {
+      "code": "TIU",
+      "name": "TILARU",
+      "osm": {
+        "name": "Tilaru",
+        "ref": "TIU",
+        "lat": 18.4701721,
+        "lon": 84.072298,
+        "railway": "station"
+      }
+    },
+    {
+      "code": "HCM",
+      "name": "HARISCHANDRAPURAM",
+      "osm": {
+        "name": "Harishchandrapuram",
+        "ref": "HCM",
+        "lat": 18.4791558,
+        "lon": 84.1215759,
+        "railway": "station"
+      }
+    },
+    {
+      "code": "KBM",
+      "name": "KOTABOMMALI",
+      "osm": {
+        "name": "Kotabommali",
+        "ref": "KBM",
+        "lat": 18.4880666,
+        "lon": 84.1995843,
+        "railway": "station"
+      }
+    },
+    {
+      "code": "DGB",
+      "name": "DANDU GOPALAPURAM HALT",
+      "osm": {
+        "name": "Dindu Gopalapuram",
+        "ref": "DGB",
+        "lat": 18.5444055,
+        "lon": 84.2428537,
+        "railway": "halt"
+      }
+    },
+    {
+      "code": "NWP",
+      "name": "NAUPADA JN.",
+      "osm": {
+        "name": "Naupada Junction",
+        "ref": "NWP",
+        "lat": 18.5789153,
+        "lon": 84.283154,
+        "railway": "station"
+      }
+    },
+    {
+      "code": "RMZ",
+      "name": "ROUTHPURAM HALT",
+      "osm": {
+        "name": "Routhpuram",
+        "ref": "RMZ",
+        "lat": 18.6205297,
+        "lon": 84.3352952,
+        "railway": "halt"
+      }
+    },
+    {
+      "code": "PUN",
+      "name": "PUNDI",
+      "osm": {
+        "name": "Pundi",
+        "ref": "PUN",
+        "lat": 18.6648529,
+        "lon": 84.3706162,
+        "railway": "station"
+      }
+    },
+    {
+      "code": "PSA",
+      "name": "PALASA",
+      "osm": {
+        "name": "Palasa",
+        "ref": "PSA",
+        "lat": 18.7573816,
+        "lon": 84.4219454,
+        "railway": "station"
+      }
+    }
+  ],
+  "missing": []
+}
