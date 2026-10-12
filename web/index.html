@@ -226,6 +226,7 @@ const hhmm = s => {
     },
   });
   } catch(err){ fail("map constructor threw: "+err.message); return; }
+  window.__map = map;   // exposed for automated screenshot checks
 
   /* ---------------- clock ---------------- */
   const span = replay.time_span;
