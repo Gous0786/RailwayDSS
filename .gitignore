@@ -14,6 +14,8 @@ env/
 
 # Scratch / temp
 *.tmp
+uvicorn.log
+_*.png
 docs/_patch.py
 docs/_body.py
 docs/_head.tmp

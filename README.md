@@ -55,9 +55,22 @@ A map of the section with the day's trains moving along it, driven by the real
 timetable. It runs **entirely offline** — no tile server, no API key, no CDN.
 
 ```bash
-python -m http.server 8000      # serve from the repository root
-# then open http://localhost:8000/web/
+uvicorn pravah.api:app --port 8000     # then open http://localhost:8000/
 ```
+
+The clock lives on the **server**, not in the browser, so every connected
+client sees the same instant and control is shared — pause on one screen and
+every screen pauses. That is what a control room needs, and it is where the
+optimiser will later write its plan.
+
+If no service is running the page falls back to replaying `web/data/replay.json`
+with a local clock, so the viewer still works behind a plain static server:
+
+```bash
+python -m http.server 8000      # fallback; open http://localhost:8000/web/
+```
+
+The HUD shows which mode is active.
 
 Play, scrub, or change replay speed; click a train for its type, chainage,
 speed and current block. Train positions come from `pravah/corridor.py`'s
@@ -68,6 +81,25 @@ The basemap is purpose-built rather than general-purpose: settlements, water,
 rivers, coastline and major roads for this corridor only, about 4.9 MB of
 GeoJSON that MapLibre renders directly. A full tile basemap would be far larger
 and would need a server.
+
+### Service endpoints
+
+| | |
+|---|---|
+| `GET /api/health` | service and data status |
+| `GET /api/corridor` | stations, polyline, chainage mapping |
+| `GET /api/state?t=` | train states at one instant (polling fallback) |
+| `WS /ws/live` | pushed state at 4 Hz, plus `play` / `pause` / `seek` / `speed` |
+
+State is shaped the way a live feed would be, so a real COA or FOIS source can
+replace `ReplaySource` without the clock, the socket or the viewer changing:
+
+```json
+{"t": 21600, "trains": [{"id":"12841","type":"SUF","dir":"UP",
+                         "km":43.2,"speed":61.0,"status":"running"}]}
+```
+
+Check it with `python analysis/test_live_feed.py` (service must be running).
 
 To rebuild everything from the cached OSM responses:
 

@@ -67,6 +67,7 @@
     <div class="stat"><span>running</span><b id="nrun">0</b></div>
     <div class="stat"><span>down / up</span><b id="ndir">0 / 0</b></div>
     <div class="stat"><span>replay day</span><b id="nday">—</b></div>
+    <div class="stat"><span>feed</span><b id="nfeed">—</b></div>
   </div>
 </div>
 
@@ -232,29 +233,41 @@ const hhmm = s => {
   scrub.min = span[0]; scrub.max = span[1]; scrub.value = Math.max(span[0], 21600);
   let t = +scrub.value, playing = false, speed = 300, last = 0;
 
-  function render(){
+  /* Draw a list of {id,type,dir,km,speed}. The list comes from the server
+     when a live feed is connected, and is computed locally otherwise, so
+     both paths render through exactly the same code. */
+  function draw(list, at){
     const feats = [];
     let dn=0, up=0;
-    for (const tr of replay.trains){
-      const r = kmAt(tr, t);
-      if (!r) continue;
-      const [km, spd] = r;
-      const [lon, lat] = corridor.position(km);
+    for (const tr of list){
+      const [lon, lat] = corridor.position(tr.km);
       feats.push({type:"Feature",
-        properties:{id:tr.id, type:tr.type, dir:tr.dir, km:km.toFixed(1), spd:spd.toFixed(0)},
+        properties:{id:tr.id, type:tr.type, dir:tr.dir,
+                    km:(+tr.km).toFixed(1), spd:(+tr.speed).toFixed(0)},
         geometry:{type:"Point", coordinates:[lon, lat]}});
       tr.dir === "DN" ? dn++ : up++;
     }
     const src = map.getSource("trains");
     if (src) src.setData({type:"FeatureCollection", features:feats});
-    const [hm, day] = hhmm(t);
+    const [hm, day] = hhmm(at);
     document.getElementById("clock").firstChild.nodeValue = hm;
     document.getElementById("daytag").textContent = day ? " +"+day+"d" : "";
     document.getElementById("nrun").textContent = feats.length;
     document.getElementById("ndir").textContent = dn+" / "+up;
   }
 
+  function render(){
+    const list = [];
+    for (const tr of replay.trains){
+      const r = kmAt(tr, t);
+      if (!r) continue;
+      list.push({id:tr.id, type:tr.type, dir:tr.dir, km:r[0], speed:r[1]});
+    }
+    draw(list, t);
+  }
+
   function loop(ts){
+    if (live){ last = 0; requestAnimationFrame(loop); return; }
     if (playing){
       if (last) t += (ts-last)/1000*speed;
       last = ts;
@@ -265,16 +278,65 @@ const hhmm = s => {
     requestAnimationFrame(loop);
   }
 
+  /* ---------------- live feed ---------------- */
+  let ws = null, live = false;
+  const feedTag = document.getElementById("nfeed");
+
+  function setFeed(label, ok){
+    feedTag.textContent = label;
+    feedTag.style.color = ok ? "#3fb950" : "#8b949e";
+  }
+  setFeed("local replay", false);
+
+  function send(cmd){
+    if (live && ws && ws.readyState === 1) { ws.send(JSON.stringify(cmd)); return true; }
+    return false;
+  }
+
+  function connect(){
+    const proto = location.protocol === "https:" ? "wss" : "ws";
+    try { ws = new WebSocket(proto+"://"+location.host+"/ws/live"); }
+    catch(e){ return; }
+
+    ws.onopen = () => { live = true; setFeed("live", true); };
+    ws.onmessage = ev => {
+      const m = JSON.parse(ev.data);
+      if (m.type === "hello"){
+        if (m.day) document.getElementById("nday").textContent = m.day;
+        return;
+      }
+      if (m.type !== "state") return;
+      t = m.t;
+      scrub.value = t;
+      playing = !!m.playing;
+      const pb = document.getElementById("play");
+      pb.textContent = playing ? "❚❚ pause" : "▶ play";
+      pb.classList.toggle("on", playing);
+      draw(m.trains, m.t);
+    };
+    ws.onclose = () => {
+      if (live) setFeed("local replay (disconnected)", false);
+      live = false;
+    };
+    ws.onerror = () => { live = false; };
+  }
+  connect();
+
   document.getElementById("play").onclick = e => {
+    if (send({cmd: playing ? "pause" : "play"})) return;   // server echoes state
     playing = !playing; last = 0;
     e.target.textContent = playing ? "❚❚ pause" : "▶ play";
     e.target.classList.toggle("on", playing);
   };
-  scrub.oninput = e => { t = +e.target.value; render(); };
+  scrub.oninput = e => {
+    t = +e.target.value;
+    if (!send({cmd:"seek", t})) render();
+  };
   document.querySelectorAll(".spd").forEach(b => b.onclick = () => {
     speed = +b.dataset.s;
     document.querySelectorAll(".spd").forEach(x => x.classList.remove("on"));
     b.classList.add("on");
+    send({cmd:"speed", speed});
   });
 
   /* ---------------- interaction ---------------- */
