@@ -1,0 +1,18 @@
+{
+  "corridor": "KTV-PSA",
+  "bbox": [
+    17.55,
+    82.85,
+    19.05,
+    84.8
+  ],
+  "attribution": "\u00a9 OpenStreetMap contributors (ODbL)",
+  "layers": {
+    "places": "basemap/places.geojson",
+    "waterways": "basemap/waterways.geojson",
+    "water": "basemap/water.geojson",
+    "coastline": "basemap/coastline.geojson",
+    "roads": "basemap/roads.geojson"
+  },
+  "note": "Self-contained offline basemap. No tile server required."
+}

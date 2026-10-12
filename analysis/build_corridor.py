@@ -154,10 +154,14 @@ def main() -> None:
             bad.append(f"{c1}-{c2} (too few nodes)")
             print(f"  {c1:>5} -> {c2:<5}   NO GEOMETRY        official {official:6.2f}")
             continue
+        # Snap the end vertices onto the station points rather than inserting
+        # them. Inserting creates a backward hook whenever the station node
+        # projects inside the run of binned nodes instead of beyond it, which
+        # in turn makes the track bearing point the wrong way at that end.
         if c1 in stpos:
-            line.insert(0, stpos[c1])
+            line[0] = stpos[c1]
         if c2 in stpos:
-            line.append(stpos[c2])
+            line[-1] = stpos[c2]
         d = sum(haversine(a, b) for a, b in zip(line, line[1:]))
         total += d
         err = abs(d - official) / official * 100 if official else 0
