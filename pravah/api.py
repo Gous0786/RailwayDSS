@@ -147,6 +147,25 @@ async def corridor() -> JSONResponse:
     })
 
 
+@app.get("/api/paths")
+async def paths() -> JSONResponse:
+    """Whole-day train paths as chainage over time.
+
+    The live feed carries only the current instant. A train graph needs the
+    complete path of every service, so it is served once and then kept in
+    step by the clock on the socket.
+    """
+    if not hub.source:
+        return JSONResponse({"error": hub.error or "not loaded"}, status_code=503)
+    s = hub.source
+    return JSONResponse({
+        "corridor": s.corridor, "day": s.day, "kind": s.kind,
+        "time_span": s.span,
+        "trains": [{"id": p.id, "type": p.type, "dir": p.dir, "pts": p.pts}
+                   for p in s.paths],
+    })
+
+
 @app.get("/api/state")
 async def state(t: float | None = None) -> JSONResponse:
     """Polling fallback for clients that cannot hold a socket open."""

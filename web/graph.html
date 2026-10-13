@@ -1,0 +1,358 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>PRAVAH — train graph</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Crect width='16' height='16' fill='%230d1117'/%3E%3Cpath d='M2 12L8 7l6-3' stroke='%2358a6ff' stroke-width='1.6' fill='none'/%3E%3C/svg%3E">
+<style>
+  :root{
+    --bg:#0d1117; --panel:#161b22; --line:#30363d; --text:#e6edf3;
+    --dim:#8b949e; --grid:#1c2430; --gridhour:#263040;
+    --dn:#4aa8ff; --up:#ffb84a; --freight:#3fb950; --cursor:#f0f6fc;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;height:100%;background:var(--bg);color:var(--text);
+    font:13px/1.45 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;overflow:hidden}
+  #wrap{position:absolute;inset:0;display:flex;flex-direction:column}
+  header{display:flex;align-items:center;gap:14px;padding:7px 14px;flex:none;
+    border-bottom:1px solid var(--line);background:var(--panel);flex:none}
+  header h1{margin:0;font-size:14px;letter-spacing:.04em}
+  header .sub{color:var(--dim);font-size:11px}
+  #clock{font-size:20px;font-variant-numeric:tabular-nums;margin-left:auto}
+  #clock small{font-size:10px;color:var(--dim);margin-left:5px}
+  button,a.btn{background:#21262d;color:var(--text);border:1px solid var(--line);
+    border-radius:5px;padding:4px 10px;font:inherit;cursor:pointer;text-decoration:none}
+  button:hover,a.btn:hover{border-color:var(--dn)}
+  button.on{background:var(--dn);border-color:var(--dn);color:#06121f}
+  #cv{flex:1;display:block;width:100%;cursor:crosshair}
+  footer{flex:none;display:flex;gap:16px;align-items:center;height:26px;
+    padding:0 14px;border-top:1px solid var(--line);background:var(--panel);
+    color:var(--dim);font-size:11px;overflow:hidden}
+  .sw{display:inline-block;width:16px;height:3px;border-radius:2px;
+    vertical-align:middle;margin-right:5px}
+  #tip{position:absolute;pointer-events:none;background:var(--panel);
+    border:1px solid var(--line);border-radius:5px;padding:7px 9px;
+    font-size:11px;display:none;z-index:5;white-space:nowrap}
+  #tip b{color:var(--text)}
+  #tip div{color:var(--dim)}
+  #msg{position:absolute;inset:0;display:grid;place-items:center;
+    background:var(--bg);z-index:9;color:var(--dim);padding:24px;text-align:center}
+</style>
+</head>
+<body>
+<div id="wrap">
+  <header>
+    <div>
+      <h1>PRAVAH — TRAIN GRAPH</h1>
+      <div class="sub">Kottavalasa Jn → Palasa · 176.83 km · <span id="day">—</span></div>
+    </div>
+    <button id="play">▶ play</button>
+    <button class="spd" data-s="60">60×</button>
+    <button class="spd on" data-s="300">300×</button>
+    <button class="spd" data-s="900">900×</button>
+    <button id="fit">reset zoom</button>
+    <a class="btn" href="./">map view →</a>
+    <div id="clock">--:--<small id="daytag"></small></div>
+  </header>
+  <canvas id="cv"></canvas>
+  <footer>
+    <span><i class="sw" style="background:var(--dn)"></i>down (KTV→PSA)</span>
+    <span><i class="sw" style="background:var(--up)"></i>up (PSA→KTV)</span>
+    <span><i class="sw" style="background:var(--freight)"></i>freight</span>
+    <span id="stats"></span>
+    <span style="margin-left:auto">drag to pan · wheel to zoom time · steeper line = faster train</span>
+  </footer>
+</div>
+<div id="tip"></div>
+<div id="msg">loading train graph…</div>
+
+<script>
+const J = p => fetch(p).then(r => { if(!r.ok) throw new Error(p+" "+r.status); return r.json(); });
+const hhmm = s => {
+  const d = Math.floor(s/86400), r = ((s%86400)+86400)%86400;
+  return [String(Math.floor(r/3600)).padStart(2,"0")+":"+
+          String(Math.floor(r%3600/60)).padStart(2,"0"), d];
+};
+const fail = m => { const e=document.getElementById("msg");
+  if(e){ e.style.display="grid"; e.textContent=String(m);} console.error(m); };
+window.onerror = (m,s,l,c) => fail("JS error: "+m+"  @"+l+":"+c);
+
+(async function(){
+  let corridor, paths;
+  try {
+    [corridor, paths] = await Promise.all([J("/api/corridor"), J("/api/paths")]);
+  } catch(e){
+    try {   // static fallback: no service running
+      const [lr, rp] = await Promise.all([J("../data/osm/linref.json"),
+                                          J("data/replay.json")]);
+      corridor = {stations: lr.stations, official_km: lr.official_km};
+      paths = rp;
+    } catch(e2){
+      return fail("could not load data: "+e.message+
+        "   —   start the service:  uvicorn pravah.api:app --port 8000");
+    }
+  }
+
+  const stations = corridor.stations;
+  const CORRIDOR_KM = corridor.official_km;
+  const trains = paths.trains;
+  document.getElementById("day").textContent = paths.day || "";
+  document.getElementById("stats").textContent =
+    trains.length + " services · " + stations.length + " stations";
+
+  const cv = document.getElementById("cv");
+  const ctx = cv.getContext("2d");
+  const PAD = {l: 74, r: 18, t: 14, b: 10};
+
+  // visible time window, seconds
+  let t0 = paths.time_span[0], t1 = paths.time_span[1];
+  const SPAN0 = [t0, t1];
+  let now = t0, playing = false, live = false, ws = null;
+  let hover = null, selected = null;
+
+  function resize(){
+    const r = cv.getBoundingClientRect(), dpr = devicePixelRatio || 1;
+    cv.width = r.width * dpr; cv.height = r.height * dpr;
+    ctx.setTransform(dpr,0,0,dpr,0,0);
+    draw();
+  }
+  const W = () => cv.getBoundingClientRect().width;
+  const H = () => cv.getBoundingClientRect().height;
+  const x = t => PAD.l + (t - t0) / (t1 - t0) * (W() - PAD.l - PAD.r);
+  const y = km => PAD.t + km / CORRIDOR_KM * (H() - PAD.t - PAD.b);
+  const tOf = px => t0 + (px - PAD.l) / (W() - PAD.l - PAD.r) * (t1 - t0);
+
+  const colour = tr => tr.type === "FREIGHT" ? "#3fb950"
+                     : tr.dir === "DN" ? "#4aa8ff" : "#ffb84a";
+
+  function draw(){
+    const w = W(), h = H();
+    ctx.clearRect(0,0,w,h);
+    ctx.fillStyle = "#0d1117"; ctx.fillRect(0,0,w,h);
+
+    // station gridlines, at true chainage scale
+    ctx.lineWidth = 1;
+    ctx.font = "10px ui-monospace,Menlo,Consolas,monospace";
+    ctx.textBaseline = "middle";
+    for (const s of stations){
+      const yy = Math.round(y(s.cum_km)) + .5;
+      const major = /JN|JUNCTION/i.test(s.name);
+      ctx.strokeStyle = major ? "#232c38" : "#171e27";
+      ctx.beginPath(); ctx.moveTo(PAD.l, yy); ctx.lineTo(w - PAD.r, yy); ctx.stroke();
+      ctx.fillStyle = major ? "#c9d6e4" : "#7d8794";
+      ctx.textAlign = "right";
+      ctx.fillText(s.code, PAD.l - 8, yy);
+      ctx.fillStyle = "#4b5663";
+      ctx.textAlign = "left";
+      ctx.fillText(s.cum_km.toFixed(0), 4, yy);
+    }
+
+    // hour gridlines
+    const hourPx = (3600 / (t1 - t0)) * (w - PAD.l - PAD.r);
+    const step = hourPx < 26 ? 6 : hourPx < 55 ? 3 : 1;
+    const first = Math.floor(t0 / 3600 / step) * step;
+    ctx.textAlign = "center"; ctx.textBaseline = "top";
+    for (let hr = first; hr * 3600 <= t1; hr += step){
+      const xx = Math.round(x(hr * 3600)) + .5;
+      if (xx < PAD.l - 1) continue;
+      ctx.strokeStyle = (hr % 24 === 0) ? "#3a4656" : "#263040";
+      ctx.beginPath(); ctx.moveTo(xx, PAD.t); ctx.lineTo(xx, h - PAD.b); ctx.stroke();
+      ctx.fillStyle = "#6b7684";
+      ctx.fillText(String(((hr % 24) + 24) % 24).padStart(2,"0"), xx, 2);
+    }
+
+    // train paths
+    for (const tr of trains){
+      if (tr.pts[tr.pts.length-1][0] < t0 || tr.pts[0][0] > t1) continue;
+      const sel = selected === tr.id, hov = hover && hover.id === tr.id;
+      ctx.strokeStyle = colour(tr);
+      ctx.globalAlpha = selected && !sel ? .18 : 1;
+      ctx.lineWidth = sel || hov ? 2.6 : 1.1;
+      ctx.beginPath();
+      let started = false;
+      for (const [tt, km] of tr.pts){
+        const px = x(tt), py = y(km);
+        started ? ctx.lineTo(px, py) : (ctx.moveTo(px, py), started = true);
+      }
+      ctx.stroke();
+      ctx.globalAlpha = 1;
+      if (sel || hov){
+        ctx.fillStyle = colour(tr);
+        ctx.font = "11px ui-monospace,Menlo,Consolas,monospace";
+        ctx.textAlign = "left"; ctx.textBaseline = "bottom";
+        const p = tr.pts[0];
+        ctx.fillText(tr.id+" "+tr.type, x(p[0])+4, y(p[1])-3);
+      }
+    }
+
+    // current time cursor, and where each train is on it
+    if (now >= t0 && now <= t1){
+      const xx = Math.round(x(now)) + .5;
+      ctx.strokeStyle = "#f0f6fc"; ctx.lineWidth = 1;
+      ctx.globalAlpha = .75;
+      ctx.beginPath(); ctx.moveTo(xx, PAD.t); ctx.lineTo(xx, h - PAD.b); ctx.stroke();
+      ctx.globalAlpha = 1;
+      for (const tr of trains){
+        const km = kmAt(tr, now);
+        if (km === null) continue;
+        ctx.fillStyle = colour(tr);
+        ctx.beginPath(); ctx.arc(xx, y(km), 3.2, 0, 6.2832); ctx.fill();
+        ctx.strokeStyle = "#0d1117"; ctx.lineWidth = 1; ctx.stroke();
+      }
+    }
+  }
+
+  function kmAt(tr, t){
+    const p = tr.pts;
+    if (t < p[0][0] || t > p[p.length-1][0]) return null;
+    let lo = 0, hi = p.length - 1;
+    while (lo < hi-1){ const m=(lo+hi)>>1; if (p[m][0] <= t) lo=m; else hi=m; }
+    const dt = p[lo+1][0] - p[lo][0];
+    const f = dt > 0 ? (t - p[lo][0]) / dt : 0;
+    return p[lo][1] + f * (p[lo+1][1] - p[lo][1]);
+  }
+
+  /* ---------- picking: nearest path within a few pixels ---------- */
+  function pick(mx, my){
+    let best = null, bestD = 7;
+    for (const tr of trains){
+      for (let i = 0; i < tr.pts.length - 1; i++){
+        const ax = x(tr.pts[i][0]),   ay = y(tr.pts[i][1]);
+        const bx = x(tr.pts[i+1][0]), by = y(tr.pts[i+1][1]);
+        if (Math.max(ax,bx) < PAD.l || Math.min(ax,bx) > W()) continue;
+        const dx = bx-ax, dy = by-ay, L2 = dx*dx+dy*dy;
+        const u = L2 ? Math.max(0, Math.min(1, ((mx-ax)*dx+(my-ay)*dy)/L2)) : 0;
+        const d = Math.hypot(mx-(ax+u*dx), my-(ay+u*dy));
+        if (d < bestD){ bestD = d; best = {id: tr.id, tr, t: tr.pts[i][0] +
+            u*(tr.pts[i+1][0]-tr.pts[i][0]), km: tr.pts[i][1] +
+            u*(tr.pts[i+1][1]-tr.pts[i][1])}; }
+      }
+    }
+    return best;
+  }
+
+  const tip = document.getElementById("tip");
+  cv.addEventListener("mousemove", e => {
+    const r = cv.getBoundingClientRect();
+    const mx = e.clientX - r.left, my = e.clientY - r.top;
+    if (dragging){
+      const dt = (dragStart.mx - mx) / (W()-PAD.l-PAD.r) * (t1-t0);
+      t0 = dragStart.t0 + dt; t1 = dragStart.t1 + dt;
+      draw(); return;
+    }
+    hover = pick(mx, my);
+    if (hover){
+      const seg = segmentFor(hover.km);
+      const [hm] = hhmm(hover.t);
+      tip.style.display = "block";
+      tip.style.left = (e.clientX + 14) + "px";
+      tip.style.top  = (e.clientY + 14) + "px";
+      tip.innerHTML = "<b>"+hover.tr.id+" "+hover.tr.type+"</b>"+
+        "<div>"+(hover.tr.dir==="DN"?"down":"up")+" · "+hm+"</div>"+
+        "<div>"+hover.km.toFixed(1)+" km"+(seg?" · "+seg:"")+"</div>";
+    } else tip.style.display = "none";
+    draw();
+  });
+  cv.addEventListener("mouseleave", () => { hover=null; tip.style.display="none"; draw(); });
+  cv.addEventListener("click", e => {
+    const r = cv.getBoundingClientRect();
+    const p = pick(e.clientX-r.left, e.clientY-r.top);
+    selected = p && selected !== p.id ? p.id : null;
+    draw();
+  });
+
+  function segmentFor(km){
+    for (let i=0;i<stations.length-1;i++)
+      if (km >= stations[i].cum_km && km <= stations[i+1].cum_km)
+        return stations[i].code+"–"+stations[i+1].code;
+    return null;
+  }
+
+  /* ---------- zoom and pan ---------- */
+  let dragging = false, dragStart = null;
+  cv.addEventListener("mousedown", e => {
+    const r = cv.getBoundingClientRect();
+    dragging = true;
+    dragStart = {mx: e.clientX-r.left, t0, t1};
+    cv.style.cursor = "grabbing";
+  });
+  addEventListener("mouseup", () => { dragging=false; cv.style.cursor="crosshair"; });
+  cv.addEventListener("wheel", e => {
+    e.preventDefault();
+    const r = cv.getBoundingClientRect();
+    const anchor = tOf(e.clientX - r.left);
+    const k = e.deltaY > 0 ? 1.18 : 1/1.18;
+    const span = Math.min(Math.max((t1-t0)*k, 900), SPAN0[1]-SPAN0[0]);
+    const f = (anchor - t0) / (t1 - t0);
+    t0 = anchor - f*span; t1 = t0 + span;
+    draw();
+  }, {passive:false});
+  document.getElementById("fit").onclick = () => { [t0,t1]=SPAN0; draw(); };
+
+  /* ---------- clock: server when available, local otherwise ---------- */
+  function setClock(t){
+    now = t;
+    const [hm, d] = hhmm(t);
+    document.getElementById("clock").firstChild.nodeValue = hm;
+    document.getElementById("daytag").textContent = d ? " +"+d+"d" : "";
+  }
+  function send(cmd){
+    if (live && ws && ws.readyState === 1){ ws.send(JSON.stringify(cmd)); return true; }
+    return false;
+  }
+  function connect(){
+    const proto = location.protocol === "https:" ? "wss" : "ws";
+    try { ws = new WebSocket(proto+"://"+location.host+"/ws/live"); } catch(e){ return; }
+    ws.onopen = () => { live = true; };
+    ws.onmessage = ev => {
+      const m = JSON.parse(ev.data);
+      if (m.type !== "state") return;
+      playing = !!m.playing;
+      const pb = document.getElementById("play");
+      pb.textContent = playing ? "❚❚ pause" : "▶ play";
+      pb.classList.toggle("on", playing);
+      setClock(m.t);
+      draw();
+    };
+    ws.onclose = () => { live = false; };
+    ws.onerror  = () => { live = false; };
+  }
+  connect();
+
+  let speed = 300, last = 0;
+  function loop(ts){
+    if (!live && playing){
+      if (last) { now += (ts-last)/1000*speed; if (now > SPAN0[1]) now = SPAN0[0];
+                  setClock(now); draw(); }
+      last = ts;
+    } else last = 0;
+    requestAnimationFrame(loop);
+  }
+  document.getElementById("play").onclick = e => {
+    if (send({cmd: playing ? "pause" : "play"})) return;
+    playing = !playing; last = 0;
+    e.target.textContent = playing ? "❚❚ pause" : "▶ play";
+    e.target.classList.toggle("on", playing);
+  };
+  document.querySelectorAll(".spd").forEach(b => b.onclick = () => {
+    speed = +b.dataset.s;
+    document.querySelectorAll(".spd").forEach(z => z.classList.remove("on"));
+    b.classList.add("on");
+    send({cmd:"speed", speed});
+  });
+  cv.addEventListener("dblclick", e => {
+    const r = cv.getBoundingClientRect();
+    const t = tOf(e.clientX - r.left);
+    setClock(t); send({cmd:"seek", t}); draw();
+  });
+
+  addEventListener("resize", resize);
+  document.getElementById("msg").remove();
+  setClock(Math.max(SPAN0[0], 6*3600));
+  resize();
+  requestAnimationFrame(loop);
+})();
+</script>
+</body>
+</html>

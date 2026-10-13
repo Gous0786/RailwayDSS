@@ -48,7 +48,23 @@ docs/
   PRAVAH_Synopsis.docx   generated output
 ```
 
-## The corridor viewer
+## The views
+
+### Train graph — `/web/graph.html`
+
+![train graph](docs/train_graph.png)
+
+The time–distance diagram a controller actually plans on. Stations down the
+left at **true chainage scale**, time across the top, one line per service.
+Down trains descend, up trains climb, and the slope of a line *is* its speed,
+so a conflict is two lines meeting. Station dwells show as short horizontal
+runs. Drag to pan, wheel to zoom the time axis, hover for detail, click to
+isolate a path, double-click to move the clock.
+
+This is where precedence and crossings will be read once the optimiser lands:
+freight paths threading the gaps, with conflicts marked.
+
+### Corridor map — `/web/`
 
 ![corridor viewer](docs/screenshot.png)
 
@@ -73,8 +89,11 @@ python -m http.server 8000      # fallback; open http://localhost:8000/web/
 
 The HUD shows which mode is active.
 
-Play, scrub, or change replay speed; click a train for its type, chainage,
-speed and current block. Train positions come from `pravah/corridor.py`'s
+Geographic context rather than an operating view. Play, scrub, or change
+replay speed; click a train for its type, chainage, speed and current block.
+
+Both views run off the **same server clock**, so two windows side by side stay
+in step automatically — pause in one and the other pauses too. Train positions come from `pravah/corridor.py`'s
 linear referencing, reimplemented identically in the browser — both produce the
 same coordinates to five decimal places.
 
