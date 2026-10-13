@@ -34,6 +34,7 @@ analysis/
   build_basemap.py       fetches offline basemap context layers
   build_replay.py        turns the timetable into a chainage-over-time feed
 pravah/
+  section.py             operational model: blocks, lines, capacities, timings
   corridor.py            linear referencing: chainage -> geographic position
 web/
   index.html             offline corridor viewer (MapLibre)
@@ -120,6 +121,35 @@ python analysis/scenario_demo.py    # greedy vs planned dispatch, real Monday da
 python analysis/build_corridor.py   # rebuild map geometry (offline, from cache)
 python docs/make_synopsis.py        # regenerate the synopsis
 ```
+
+## The section graph
+
+The operational model the optimiser and the verification simulator both
+consume — distinct from `corridor.py`, which answers the geographic question
+of where a chainage sits on a map.
+
+```
+21 links, 46 running lines   DN / UP / MID, with signalling and line speed
+103 station lines            48 loops, 70 platforms, individual lengths
+19 of 22 stations            have precedence/crossing facility
+80 holding opportunities     for a 650 m rake; none at the four halts
+```
+
+A link between adjacent stations appears twice in the extract, once per
+direction, but is **one physical link carrying shared lines**. Modelling the
+*line* as the resource is what makes single-line working expressible: close
+the down line and down trains must share the up line with opposing traffic,
+which is exactly when crossings have to be decided.
+
+```bash
+python -m pravah.section                  # summary
+python analysis/check_section_graph.py    # 18 checks against the real timetable
+```
+
+Class speeds are derived from the published schedule (90th percentile of
+observed point-to-point speeds, capped at line speed) rather than assumed.
+Freight uses the measured 31 km/h median from the goods movement log, to be
+replaced per block by the learned estimator.
 
 ## Data
 
