@@ -143,6 +143,8 @@ which is exactly when crossings have to be decided.
 
 ```bash
 python -m pravah.section                  # summary
+python -m pravah.section --schematic      # corridor strip: lines, holding, signalling
+python -m pravah.section --full           # every station line and link timing
 python analysis/check_section_graph.py    # 18 checks against the real timetable
 ```
 

@@ -535,8 +535,84 @@ class SectionGraph:
                 f"{len(self.links)} links, {nlines} running lines>")
 
 
+def _full(g: "SectionGraph") -> None:
+    """Print every station and every link in full."""
+    print()
+    print("=" * 74)
+    print("STATIONS")
+    print("=" * 74)
+    for st in g.stations:
+        tags = ["junction"] if st.is_junction else []
+        tags.append("crossing" if st.can_cross else "NO CROSSING FACILITY")
+        print()
+        print(f"  {st.code:<5} {st.name[:30]:<30} {st.cum_km:7.2f} km   "
+              f"[{', '.join(tags)}]")
+        if not st.lines:
+            print("        (no line records)")
+        for ln in st.lines:
+            length = f"{ln.length_m:6.0f} m" if ln.length_m else "     ? m"
+            print(f"        {ln.number:<6} {ln.name[:8]:<8} {ln.category.value:<7}"
+                  f"{length}  {ln.direction.value:<5}"
+                  f"{'PF' if ln.is_platform else '  '}  "
+                  f"{'holds 650m rake' if ln.fits(650) else ''}")
+
+    print()
+    print("=" * 74)
+    print("LINKS   (running time in minutes, DOWN direction)")
+    print("=" * 74)
+    print()
+    print(f"  {'link':<12}{'km':>6}  {'line':<5}{'sig':<4}{'speed':>6}"
+          f"{'SUF':>7}{'MEX':>7}{'FRT':>7}{'headway':>9}")
+    for lid, link in g.links.items():
+        for i, ln in enumerate(link.lines):
+            head = f"{lid:<12}{link.length_km:6.2f}  " if i == 0 else " " * 20
+            print(f"  {head}{ln.name:<5}{ln.signalling.value:<4}"
+                  f"{ln.max_speed_kmph:6.0f}"
+                  f"{g.running_time(lid, ln.name, 'SUF', Direction.DOWN):7.1f}"
+                  f"{g.running_time(lid, ln.name, 'MEX', Direction.DOWN):7.1f}"
+                  f"{g.running_time(lid, ln.name, 'FREIGHT', Direction.DOWN):7.1f}"
+                  f"{g.headway(lid, ln.name):9.1f}")
+        psr = g.psr_for(lid, Direction.DOWN)
+        if psr:
+            print(f"        restriction: pass {psr.pass_kmph:.0f} / goods "
+                  f"{psr.goods_kmph:.0f} km/h, penalty {psr.loss_pass_s:.0f}s "
+                  f"/ {psr.loss_goods_s:.0f}s")
+
+
+def _schematic(g: "SectionGraph") -> None:
+    """A control-office style strip view of the corridor."""
+    print()
+    print("=" * 74)
+    print("SCHEMATIC    O junction    o station    x no crossing facility")
+    print("             = reversible line   | directional line")
+    print("=" * 74)
+    print()
+    for a, b in zip(g.stations, g.stations[1:]):
+        sym = "O" if a.is_junction else ("x" if not a.can_cross else "o")
+        held = len(a.holding_lines(650))
+        link = g.link(a.code, b.code)
+        rails = "".join("=" if ln.nominal_direction is Direction.BOTH else "|"
+                        for ln in link.lines)
+        hold = f"hold {held}" if held else "  --  "
+        print(f"  {sym} {a.code:<5} {a.cum_km:7.2f} km  {hold:<8}")
+        print(f"  {'':<1} {'':<5} {'':<7}     {rails:<4}  {link.length_km:5.2f} km  "
+              f"{len(link.lines)} lines, {link.lines[0].signalling.value}")
+    last = g.stations[-1]
+    sym = "O" if last.is_junction else ("x" if not last.can_cross else "o")
+    held = len(last.holding_lines(650))
+    print(f"  {sym} {last.code:<5} {last.cum_km:7.2f} km  "
+          f"{('hold ' + str(held)) if held else '  --  '}")
+
+
 def main() -> None:
+    import sys as _sys
     g = SectionGraph.load()
+    if "--full" in _sys.argv:
+        _full(g)
+        return
+    if "--schematic" in _sys.argv:
+        _schematic(g)
+        return
     print("=" * 74)
     print("SECTION GRAPH")
     print("=" * 74)
