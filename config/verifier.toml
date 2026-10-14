@@ -1,0 +1,75 @@
+# Verification thresholds.
+#
+# Every value here is optional; omitting one keeps the default shown. Defaults
+# encode how the section is worked today, so an unmodified file reproduces
+# current operating practice.
+#
+# Loaded by pravah.verify.VerifierConfig.load(). Also constructible directly
+# in code, which is how tests vary one knob at a time.
+
+[service]
+# How far a scheduled service may be moved from its published time.
+#   0  = immovable. This is today's reality and the default.
+#   >0 = permits the optimiser to trade punctuality for freight throughput.
+#        Sweep 0 -> 2 -> 5 to produce the Pareto curve.
+tolerance_min = 0
+
+# A service is "on time" for the punctuality KPI within this many minutes.
+punctuality_threshold_min = 5
+
+
+[safety]
+# Extra separation on top of the minimum the signalling allows. Raise to plan
+# conservatively; the section graph already derives the signalling minimum
+# from block length, signal spacing and line speed.
+headway_margin_min = 0.0
+
+# Slack before a traversal counts as faster than physically possible. Covers
+# rounding in the plan, not real speeding.
+running_time_tolerance_pct = 2.0
+
+# Absolute floor on that tolerance. Published schedules are recorded to the
+# whole minute, so a run can look fractionally faster than the technical
+# minimum through rounding alone; 2% of a 4 minute block is only 5 seconds.
+running_time_tolerance_min = 1.0
+
+# A recorded stop must last at least this long to be a stop at all.
+min_dwell_min = 0.5
+
+# Blocking discipline: a train occupies a line until it enters the next one,
+# so any gap between consecutive movements must be covered by a recorded hold.
+# Disable only when checking a plan that does not model holds.
+enforce_blocking = true
+blocking_gap_tolerance_min = 0.5
+
+
+[holding]
+# A loop is always available for holding. A main or platform line may be used
+# only where the station has a third line, so a through path remains open.
+allow_hold_on_main = true
+
+# 15 station lines in the ICMS extract carry a placeholder length rather than
+# a real measurement. false treats them as unusable, which understates
+# capacity slightly but never plans a rake onto a line that may not fit it.
+assume_unknown_line_fits = false
+
+# Detention beyond this is reported as a warning, not an error.
+warn_hold_over_min = 60
+
+
+[severity]
+# Promote or demote any individual check: "error", "warning" or "ignore".
+# Anything at "error" makes the plan invalid. Unlisted checks are errors,
+# except long_hold which defaults to a warning.
+#
+# block_conflict     = "error"
+# headway            = "error"
+# crossing_conflict  = "error"
+# continuity         = "error"
+# blocking           = "error"
+# closure            = "error"
+# running_time       = "error"
+# hold_infeasible    = "error"
+# station_capacity   = "error"
+# service_integrity  = "error"
+long_hold = "warning"

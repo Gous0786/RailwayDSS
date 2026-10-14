@@ -172,6 +172,54 @@ observed point-to-point speeds, capped at line speed) rather than assumed.
 Freight uses the measured 31 km/h median from the goods movement log, to be
 replaced per block by the learned estimator.
 
+## Verification
+
+Nothing the optimiser produces is believed until something else has checked
+it. `pravah/verify.py` re-derives every occupation from the plan's times alone
+and reports what breaks — block conflicts, headway, crossings under
+single-line working, continuity, blocking discipline, closures, running times,
+holding feasibility, station capacity and service integrity — plus the KPIs
+the problem statement names.
+
+It imports nothing outside the standard library except `pravah.section`, so
+the independence from the solver is visible by reading it. That shared
+dependency is the honest limit: a wrong headway in the section graph would be
+inherited by both, which is why the section graph is validated separately.
+
+```bash
+pytest tests/test_verify.py -q        # 23 checks, mostly deliberately broken plans
+python analysis/check_verifier.py     # verify the real Monday timetable
+```
+
+Every threshold lives in [config/verifier.toml](config/verifier.toml) —
+service tolerance (0 by default, raise it for the throughput-versus-
+punctuality curve), headway margin, running-time slack, holding rules, and the
+severity of each individual check.
+
+### What the ground-truth test found
+
+Running the verifier against the 87 services Indian Railways actually ran
+started at **225 errors and ended at 7 (0.63% of 1,103 occupations)**. The
+difference was almost entirely the verifier and the test harness being wrong,
+which is the point of the exercise:
+
+- Putting every down train on one line manufactured 103 conflicts the railway
+  never had. The timetable records *when* a train ran, never *which line* it
+  used, so a line has to be assigned.
+- A percentage-only running-time tolerance cannot absorb minute-rounding in a
+  published schedule — 2% of a four-minute block is five seconds. 113 of the
+  errors had a median shortfall of 0.42 min. An absolute floor was added.
+- **A commercial stop is not a precedence hold.** Routhpuram has no crossing
+  facility but trains stop there daily. Stopping for passengers needs a
+  platform; being held so another train may pass needs a loop. Conflating
+  them produced 14 false violations, and the distinction now lives in
+  `Hold.purpose`.
+
+The 7 that remain are a genuine calibration finding: the KUK–VZM permanent
+speed restriction records a 337-second penalty, so the model budgets 10.7
+minutes where the railway schedules 9.0. The recorded penalty looks
+worst-case. Worth confirming before the optimiser plans conservatively there.
+
 ## Data
 
 **ICMS extracts** (`data/ktv-psa/`) — 63 block sections, 22 stations, 103 station
