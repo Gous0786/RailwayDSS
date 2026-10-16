@@ -38,7 +38,8 @@ from itertools import pairwise
 from pathlib import Path
 
 from .plan import PRECEDENCE, Hold, Movement, Plan, TrainPlan
-from .section import Direction, SectionGraph, Signalling
+from .section import (ABSOLUTE_CLEARANCE_MIN, Direction, SectionGraph,
+                      Signalling)
 
 DEFAULT_CONFIG = Path(__file__).resolve().parent.parent / "config" / "verifier.toml"
 
@@ -99,6 +100,11 @@ class VerifierConfig:
     # block is 5 seconds - so an absolute floor is applied as well.
     running_time_tolerance_min: float = 1.0
     min_dwell_min: float = 0.5
+    # Under absolute block the section must be proved clear before the next
+    # train is admitted, so the gap is measured from the previous train's
+    # exit, not from its entry. A line-speed headway is too lax here: a slow
+    # freight occupies the section far longer than the headway implies.
+    absolute_clearance_min: float = ABSOLUTE_CLEARANCE_MIN
     enforce_blocking: bool = True
     blocking_gap_tolerance_min: float = 0.5
 
@@ -130,6 +136,8 @@ class VerifierConfig:
             running_time_tolerance_pct=float(saf.get("running_time_tolerance_pct", 2.0)),
             running_time_tolerance_min=float(saf.get("running_time_tolerance_min", 1.0)),
             min_dwell_min=float(saf.get("min_dwell_min", 0.5)),
+            absolute_clearance_min=float(saf.get("absolute_clearance_min",
+                                                 ABSOLUTE_CLEARANCE_MIN)),
             enforce_blocking=bool(saf.get("enforce_blocking", True)),
             blocking_gap_tolerance_min=float(saf.get("blocking_gap_tolerance_min", 0.5)),
             allow_hold_on_main=bool(hold.get("allow_hold_on_main", True)),
@@ -268,14 +276,20 @@ class Verifier:
                               (ta.id, tb.id), resource, b_in)
                     continue
 
-                # Absolute block admits one train at a time; automatic block
-                # allows several in different signal sections, so only the
-                # separation between entries matters there.
-                if overlapping and line and line.signalling is Signalling.ABSOLUTE:
-                    self._add(v, Kind.BLOCK_CONFLICT,
-                              f"{tb.id} enters at {b_in:.1f} while {ta.id} holds the "
-                              f"section until {a_out:.1f} (absolute block)",
-                              (ta.id, tb.id), resource, b_in)
+                # Absolute block admits one train at a time and the section
+                # must be proved clear afterwards. Automatic block allows
+                # several trains in different signal sections, so there only
+                # the separation between entries matters.
+                if line and line.signalling is Signalling.ABSOLUTE:
+                    need = a_out + self.cfg.absolute_clearance_min
+                    if b_in + 1e-9 < need:
+                        kind = (Kind.BLOCK_CONFLICT if overlapping
+                                else Kind.HEADWAY)
+                        self._add(v, kind,
+                                  f"{tb.id} enters at {b_in:.2f}; {ta.id} clears at "
+                                  f"{a_out:.2f} and the section must be proved "
+                                  f"clear until {need:.2f} (absolute block)",
+                                  (ta.id, tb.id), resource, b_in)
                     continue
 
                 gap = b_in - a_in

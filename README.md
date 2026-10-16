@@ -206,6 +206,44 @@ The same pass emits the distributions a traffic generator would need —
 arrival pattern, wagon mix, load state, per-block speeds — since they come
 from the same inputs.
 
+## The optimiser
+
+Decides which rakes run, when each departs and where each is held, so the
+section clears as many as possible without disturbing the scheduled services.
+Modelled as a blocking job-shop and solved exactly with CP-SAT.
+
+```python
+from pravah.optimise import Optimiser, OptimiserConfig
+from pravah.timetable import scheduled_plan
+
+plan, report = Optimiser(graph).solve(demand, fixed=scheduled_plan(graph))
+print(report.summary())
+```
+
+```
+window      offered  dispatched   solve  freight-caused violations
+06:00-12:00      27          23    1.0s  0
+full day        112         106   68.0s  0
+```
+
+The objective is lexicographic, solved in stages because CP-SAT minimises one
+expression at a time — throughput first, then total transit, then number of
+stop-starts. **Each stage reports its own optimality gap**, which is the
+certified-quality claim rather than a hope.
+
+Two things the signalling model has to get right, both of which the verifier
+caught when they were wrong:
+
+- **Absolute block** admits one train at a time *and* the section must be
+  proved clear afterwards, so the occupation interval is padded by the
+  clearance time. **Automatic block** legitimately holds several trains in
+  different signal sections, so there the constraint applies to headway-length
+  stubs at the entry instead — `NoOverlap` on the full interval would forbid
+  perfectly legal co-occupancy.
+- Headway and running time are rounded **up** into integer seconds. Rounding
+  to nearest leaves a plan a fraction of a second short of the signalling
+  minimum, and the verifier rejects it — correctly.
+
 ## Running-time calibration
 
 Before trusting any plan, the modelled times were measured against what the
