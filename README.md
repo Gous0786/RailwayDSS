@@ -206,6 +206,36 @@ The same pass emits the distributions a traffic generator would need —
 arrival pattern, wagon mix, load state, per-block speeds — since they come
 from the same inputs.
 
+## Running-time calibration
+
+Before trusting any plan, the modelled times were measured against what the
+railway actually schedules and what goods trains actually achieve.
+
+```bash
+python analysis/calibrate_running_times.py   # -> data/derived/running_time_calibration.json
+```
+
+**The KUK–VZM speed restriction is correct.** Its recorded 337-second penalty
+looked implausibly large until measured: with it the model sits at **0.98 of
+the scheduled median — the best-calibrated link on the corridor**. Without it
+the model would claim 5.1 minutes against a scheduled 11.0.
+
+Two findings came out of the sweep instead:
+
+- Across 42 link-directions the model sits at a median **0.79** of the
+  scheduled time, which is expected — a technical minimum carries none of the
+  engineering and traffic allowances a published schedule does. The spread is
+  the point: **0.18 to 1.11**. Links approaching junctions and the terminal
+  carry allowances the model has no representation for. PUN–PSA is modelled at
+  5.9 minutes against a scheduled 32.0.
+- This does not drive plans. Passenger services enter the optimiser as **fixed
+  obstacles at their published times**, so their modelled running time is never
+  used to schedule anything.
+- Freight is calibrated separately against the goods log and sits at **1.09 of
+  measured on the median block** — slightly conservative, the right direction
+  for planning. But it ranges 0.68 to 1.59 by block, and closing that spread is
+  exactly the learned estimator's job. This report is the baseline it has to beat.
+
 ## Verification
 
 Nothing the optimiser produces is believed until something else has checked
