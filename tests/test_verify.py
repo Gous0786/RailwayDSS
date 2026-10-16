@@ -288,3 +288,37 @@ def test_being_held_to_be_passed_still_needs_a_loop(g):
                     "precedence", PRECEDENCE)]
     rep = Verifier(g, VerifierConfig(assume_unknown_line_fits=True)).verify(plan_of(t))
     assert Kind.HOLD_INFEASIBLE.value in error_kinds(rep)
+
+
+# ------------------------------------------------------ freight demand
+def test_demand_loads_and_converts_to_plans():
+    from pravah.demand import DemandBook
+    book = DemandBook.load()
+    assert len(book.days) == 27
+    day = book.busiest()
+    assert len(day) > 50
+    plans = day.to_train_plans()
+    assert len(plans) == len(day)
+    assert all(p.train_class == "FREIGHT" for p in plans)
+    assert all(p.rake_length_m > 400 for p in plans)
+
+
+def test_demand_filters_are_consistent(g):
+    from pravah.demand import DemandBook
+    day = DemandBook.load().busiest()
+    dn, up = day.direction("DN"), day.direction("UP")
+    assert len(dn) + len(up) == len(day)
+    morning = day.between(360, 720)
+    assert all(360 <= r.ready_min <= 720 for r in morning)
+    assert len(day.end_to_end()) <= len(day)
+
+
+def test_every_rake_can_be_held_somewhere(g):
+    """A rake the section cannot hold anywhere is unschedulable — the
+    optimiser would have no legal way to let a passenger train pass it."""
+    from pravah.demand import DemandBook
+    stranded = []
+    for r in DemandBook.load().busiest():
+        if not any(s.holding_lines(r.length_m) for s in g.stations):
+            stranded.append((r.id, r.length_m))
+    assert not stranded, f"{len(stranded)} rake(s) cannot be held anywhere"

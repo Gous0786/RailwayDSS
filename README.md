@@ -172,6 +172,40 @@ observed point-to-point speeds, capped at line speed) rather than assumed.
 Freight uses the measured 31 km/h median from the goods movement log, to be
 replaced per block by the learned estimator.
 
+## Freight demand
+
+The goods log records movements that already happened. The optimiser needs the
+opposite — rakes presenting themselves at the section wanting to cross — so
+`analysis/build_freight_demand.py` inverts one into the other.
+
+```
+2,572 consignments over 27 days    median 95 entries/day, range 87-112
+1,361 down / 1,211 up              82% loaded
+interarrival: 22 min down, 27 up   observed transit: median 5.6 h
+```
+
+```bash
+python analysis/build_freight_demand.py     # -> data/derived/freight_demand.json
+```
+
+```python
+from pravah.demand import DemandBook
+day = DemandBook.load().busiest()           # 112 rakes on 2025-08-01
+day.between(360, 720).to_train_plans()      # morning rakes, ready to schedule
+```
+
+**One modelling assumption worth knowing:** rake length is not recorded
+anywhere in the extract, so it is derived from wagon type using standard
+Indian Railways compositions. Length decides which loops a rake can be held
+in, so it matters — a 686 m BOXN rake fits at 17 of 22 stations, a 750 m rake
+at only 16, and on far fewer lines. The table is in `build_freight_demand.py`
+and variants are matched by family prefix, so `BCNAHSM1` resolves to BCN.
+20 of 2,572 rakes (0.8%) match neither and take a 650 m default.
+
+The same pass emits the distributions a traffic generator would need —
+arrival pattern, wagon mix, load state, per-block speeds — since they come
+from the same inputs.
+
 ## Verification
 
 Nothing the optimiser produces is believed until something else has checked
