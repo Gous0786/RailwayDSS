@@ -199,6 +199,7 @@ class Optimiser:
         rakes: list[tuple[Rake, list, dict]] = []
         line_intervals: dict[str, list] = {}
         stub_intervals: dict[str, list] = {}
+        bidi_intervals: dict[str, dict] = {}
         station_holds: dict[str, list] = {}
         presence: list = []
         transit_terms: list = []
@@ -228,6 +229,15 @@ class Optimiser:
                 leave = m.NewIntVar(H0, H1, f"out[{rake.id},{link}]")
                 m.Add(leave == enter + tau)
                 ln = self.g.line(link, line)
+                # A line worked in both directions - a MID road, or any line
+                # under single-line working - cannot hold OPPOSING movements
+                # at once. Same-direction following stays legal under the
+                # signalling rules, so only opposing pairs are excluded.
+                if ln.nominal_direction is Direction.BOTH:
+                    bidi_intervals.setdefault(resource, {}).setdefault(
+                        d, []).append(
+                        m.NewOptionalIntervalVar(enter, tau, leave, z,
+                                                 f"bidi[{rake.id},{link}]"))
                 if ln.signalling is Signalling.ABSOLUTE:
                     # Occupy for the traversal plus the time needed to prove
                     # the section clear, so the next train cannot be admitted
@@ -302,6 +312,32 @@ class Optimiser:
                                               f"fixhw[{resource},{a}]"))
             if len(stubs) > 1:
                 m.AddNoOverlap(stubs)
+
+        # Bidirectional lines: forbid opposing movements only. Fixed traffic
+        # is added on the direction it actually ran.
+        if fixed:
+            for t in fixed.trains:
+                for mv in t.movements:
+                    ln = self.g.line(mv.link, mv.line)
+                    if ln.nominal_direction is not Direction.BOTH:
+                        continue
+                    a, b = int(mv.enter * SEC), int(mv.exit * SEC)
+                    if b < H0 or a > H1:
+                        continue
+                    d = self.g.direction_of(mv.from_station, mv.to_station)
+                    bidi_intervals.setdefault(mv.resource, {}).setdefault(
+                        d, []).append(
+                        m.NewIntervalVar(a, max(1, b - a), b,
+                                         f"fixbidi[{mv.resource},{a}]"))
+        opposing = 0
+        for resource, by_dir in bidi_intervals.items():
+            down = by_dir.get(Direction.DOWN, [])
+            up = by_dir.get(Direction.UP, [])
+            for iv_a in down:
+                for iv_b in up:
+                    m.AddNoOverlap([iv_a, iv_b])
+                    opposing += 1
+        report_opposing = opposing
 
         longest = max((r.length_m for r in demand), default=686.0)
         for code, intervals in station_holds.items():

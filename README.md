@@ -244,6 +244,43 @@ caught when they were wrong:
   to nearest leaves a plan a fraction of a second short of the signalling
   minimum, and the verifier rejects it — correctly.
 
+## Evaluation
+
+```bash
+python analysis/evaluate.py --days 3 --limit 20
+```
+
+Each rake in the demand carries the transit it actually achieved in August
+2025, so the comparison is **paired per rake** rather than aggregate.
+Comparing a count of dispatched rakes against the measured 31.2 end-to-end
+traversals per day would be meaningless, since most rakes cross only part of
+the corridor.
+
+```
+rakes cleared per day            101.3  of 106.7 offered   (95%)
+violations introduced                0
+scheduled services disturbed         0  (held fixed by construction)
+
+detention, median per rake     observed 114.5m -> planned 0.0m
+detention reduced by 90% across 239 paired rakes
+```
+
+**What that 90% does and does not mean.** Planned detention is near zero
+because the section has room — its busiest line runs at 36% occupancy. But the
+gap is *not all recoverable*. The model knows only about conflicts with the
+scheduled services and with other freight on this section. Real detention also
+comes from crew and locomotive changes, examination, yard congestion, and
+waiting for a path through the *next* section, none of which it sees.
+
+The honest reading: **most observed non-running time is not explained by path
+conflicts on this section.** That is a finding about where freight time
+actually goes, not a claim that an optimiser would recover it.
+
+Rakes whose observed transit exceeds 4× free-running are excluded from the
+headline — one rake crossing a single link showed 2,405 observed minutes, which
+is a rake parked in a yard, not one waiting for a path. The unfiltered figure
+(94%) is printed beside it so the difference is visible.
+
 ## Running-time calibration
 
 Before trusting any plan, the modelled times were measured against what the

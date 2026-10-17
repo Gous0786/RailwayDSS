@@ -1,0 +1,85 @@
+{
+ "baseline": {
+  "end_to_end_per_day": 31.2,
+  "median_transit_h": 10.52,
+  "effective_kmph": 16.8,
+  "running_kmph": 30.8,
+  "detention_pct": 45.0
+ },
+ "days": [
+  {
+   "day": "2025-08-01",
+   "offered": 112,
+   "dispatched": 106,
+   "end_to_end_offered": 29,
+   "end_to_end_dispatched": 25,
+   "solve_s": 45.0,
+   "gaps_pct": [
+    0.0,
+    8.2,
+    0.0
+   ],
+   "violations_introduced": 0,
+   "median_planned_min": 78.4666666666667,
+   "median_observed_min": 266.0,
+   "median_planned_detention": 0.013978494623685833,
+   "median_observed_detention": 127.547311827957
+  },
+  {
+   "day": "2025-08-12",
+   "offered": 105,
+   "dispatched": 101,
+   "end_to_end_offered": 12,
+   "end_to_end_dispatched": 10,
+   "solve_s": 44.9,
+   "gaps_pct": [
+    0.0,
+    5.3,
+    100.0
+   ],
+   "violations_introduced": 0,
+   "median_planned_min": 78.4666666666667,
+   "median_observed_min": 319.0,
+   "median_planned_detention": 0.013978494623685833,
+   "median_observed_detention": 182.547311827957
+  },
+  {
+   "day": "2025-08-18",
+   "offered": 103,
+   "dispatched": 97,
+   "end_to_end_offered": 41,
+   "end_to_end_dispatched": 35,
+   "solve_s": 46.3,
+   "gaps_pct": [
+    0.0,
+    10.4,
+    0.0
+   ],
+   "violations_introduced": 0,
+   "median_planned_min": 78.4666666666667,
+   "median_observed_min": 361.0,
+   "median_planned_detention": 0.013978494623685833,
+   "median_observed_detention": 197.24408602150538
+  }
+ ],
+ "summary": {
+  "days": 3,
+  "offered_per_day": 106.7,
+  "cleared_per_day": 101.3,
+  "end_to_end_per_day": 23.3,
+  "paired_rakes": 239,
+  "median_observed_detention_min": 114.5,
+  "median_planned_detention_min": 0.0,
+  "detention_reduction_pct": 89.8,
+  "detention_reduction_pct_unfiltered": 93.8,
+  "rakes_excluded_as_yard_bound": 65,
+  "improved_share_pct": 82.8,
+  "violations_introduced": 0
+ },
+ "caveats": [
+  "Observed detention includes yard dwell, crew and locomotive changes and waiting for onward paths beyond this section, none of which section scheduling can fix. Rakes over 4x free-running are excluded, but even the filtered figure is an upper bound on what is recoverable.",
+  "Free-running times are a technical minimum, calibrated at 1.09 of measured on the median block. Detention is reported separately because it uses the same figure on both sides, so the modelling assumption cancels.",
+  "Demand is the arrivals the railway actually saw; upstream operations are not re-optimised.",
+  "Scheduled services are held fixed, so punctuality is unchanged by construction rather than by result."
+ ]
+}
