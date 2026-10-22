@@ -52,6 +52,8 @@
     <button class="spd on" data-s="300">300×</button>
     <button class="spd" data-s="900">900×</button>
     <button id="fit">reset zoom</button>
+    <button id="opt">◆ optimise freight</button>
+    <button id="toggle" class="on" title="show or hide the planned freight">freight</button>
     <a class="btn" href="./">map view →</a>
     <div id="clock">--:--<small id="daytag"></small></div>
   </header>
@@ -61,6 +63,7 @@
     <span><i class="sw" style="background:var(--up)"></i>up (PSA→KTV)</span>
     <span><i class="sw" style="background:var(--freight)"></i>freight</span>
     <span id="stats"></span>
+    <span id="kpis"></span>
     <span style="margin-left:auto">drag to pan · wheel to zoom time · steeper line = faster train</span>
   </footer>
 </div>
@@ -110,6 +113,11 @@ window.onerror = (m,s,l,c) => fail("JS error: "+m+"  @"+l+":"+c);
   const SPAN0 = [t0, t1];
   let now = t0, playing = false, live = false, ws = null;
   let hover = null, selected = null;
+
+  /* the optimiser's output, once asked for */
+  let freight = [];           // planned paths, same shape as the services
+  let violations = [];        // whatever the verifier found, if anything
+  let showFreight = true;
 
   function resize(){
     const r = cv.getBoundingClientRect(), dpr = devicePixelRatio || 1;
@@ -186,6 +194,47 @@ window.onerror = (m,s,l,c) => fail("JS error: "+m+"  @"+l+":"+c);
       }
     }
 
+    // planned freight, threading the gaps between the fixed services
+    if (showFreight && freight.length){
+      for (const tr of freight){
+        if (tr.pts[tr.pts.length-1][0] < t0 || tr.pts[0][0] > t1) continue;
+        const sel = selected === tr.id, hov = hover && hover.id === tr.id;
+        ctx.strokeStyle = "#3fb950";
+        ctx.globalAlpha = selected && !sel ? .15 : .95;
+        ctx.lineWidth = sel || hov ? 3 : 1.6;
+        ctx.beginPath();
+        let started = false;
+        for (const [tt, km] of tr.pts){
+          const px = x(tt), py = y(km);
+          started ? ctx.lineTo(px, py) : (ctx.moveTo(px, py), started = true);
+        }
+        ctx.stroke();
+        // a hold is where the plan chose to stand a rake aside
+        ctx.lineWidth = 5; ctx.strokeStyle = "#2ea043";
+        for (const h of tr.holds || []){
+          if (h.km == null) continue;
+          ctx.beginPath();
+          ctx.moveTo(x(h.from), y(h.km)); ctx.lineTo(x(h.to), y(h.km));
+          ctx.stroke();
+        }
+        ctx.globalAlpha = 1;
+      }
+    }
+
+    // anything the verifier objected to
+    for (const v of violations){
+      if (v.at == null) continue;
+      const secs = v.at * 60, xx = x(secs);
+      if (xx < PAD.l || xx > w - PAD.r) continue;
+      const st = stations.find(s => v.resource && v.resource.startsWith(s.code));
+      const yy = st ? y(st.cum_km) : (PAD.t + h) / 2;
+      ctx.strokeStyle = "#f85149"; ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.moveTo(xx - 5, yy - 5); ctx.lineTo(xx + 5, yy + 5);
+      ctx.moveTo(xx + 5, yy - 5); ctx.lineTo(xx - 5, yy + 5);
+      ctx.stroke();
+    }
+
     // current time cursor, and where each train is on it
     if (now >= t0 && now <= t1){
       const xx = Math.round(x(now)) + .5;
@@ -216,7 +265,8 @@ window.onerror = (m,s,l,c) => fail("JS error: "+m+"  @"+l+":"+c);
   /* ---------- picking: nearest path within a few pixels ---------- */
   function pick(mx, my){
     let best = null, bestD = 7;
-    for (const tr of trains){
+    const candidates = showFreight ? trains.concat(freight) : trains;
+    for (const tr of candidates){
       for (let i = 0; i < tr.pts.length - 1; i++){
         const ax = x(tr.pts[i][0]),   ay = y(tr.pts[i][1]);
         const bx = x(tr.pts[i+1][0]), by = y(tr.pts[i+1][1]);
@@ -289,6 +339,59 @@ window.onerror = (m,s,l,c) => fail("JS error: "+m+"  @"+l+":"+c);
     draw();
   }, {passive:false});
   document.getElementById("fit").onclick = () => { [t0,t1]=SPAN0; draw(); };
+
+  /* ---------- ask the optimiser to plan the visible window ---------- */
+  const optBtn = document.getElementById("opt");
+  const kpiBox = document.getElementById("kpis");
+
+  document.getElementById("toggle").onclick = e => {
+    showFreight = !showFreight;
+    e.target.classList.toggle("on", showFreight);
+    draw();
+  };
+
+  optBtn.onclick = async () => {
+    const from = Math.max(0, Math.floor(t0 / 60));
+    const to   = Math.min(1440, Math.ceil(t1 / 60));
+    optBtn.disabled = true;
+    optBtn.textContent = "solving…";
+    kpiBox.textContent = "";
+    try {
+      const res = await fetch("/api/optimise", {
+        method: "POST",
+        headers: {"Content-Type": "application/json"},
+        body: JSON.stringify({from_min: from, to_min: to, limit_s: 15}),
+      });
+      if (!res.ok) throw new Error("HTTP " + res.status);
+      const d = await res.json();
+      if (d.error) throw new Error(d.error);
+
+      freight = d.paths || [];
+      violations = d.violations || [];
+      showFreight = true;
+      document.getElementById("toggle").classList.add("on");
+
+      const gap = (d.stages || []).map(s => (s.gap_pct || 0).toFixed(0) + "%").join("/");
+      const k = d.kpis || {};
+      kpiBox.innerHTML =
+        "<b style='color:#3fb950'>" + d.dispatched + "/" + d.offered + " freight</b>" +
+        " · gaps " + gap +
+        " · detention " + Math.round(k.detention_min || 0) + "m" +
+        " · utilisation " + (k.utilization_pct || 0).toFixed(1) + "%" +
+        " · " + d.seconds + "s" +
+        (violations.length
+          ? " · <b style='color:#f85149'>" + violations.length + " violation(s)</b>"
+          : " · <span style='color:#3fb950'>verified clean</span>");
+      optBtn.textContent = "◆ re-optimise";
+      draw();
+    } catch (err){
+      kpiBox.innerHTML = "<span style='color:#f85149'>optimise failed: " +
+                         err.message + "</span>";
+      optBtn.textContent = "◆ optimise freight";
+    } finally {
+      optBtn.disabled = false;
+    }
+  };
 
   /* ---------- clock: server when available, local otherwise ---------- */
   function setClock(t){

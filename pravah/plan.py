@@ -226,3 +226,46 @@ class Plan:
         return (f"<Plan {self.label or 'unnamed'}: {len(self.trains)} trains "
                 f"({len(self.freight)} freight), {len(self.closures)} closures, "
                 f"{self.horizon[0]:.0f}-{self.horizon[1]:.0f} min>")
+
+
+def plan_to_paths(graph, plan: "Plan") -> list[dict]:
+    """A plan as chainage-over-time, the shape the train graph draws.
+
+    Each movement contributes its two endpoints; a hold shows up on its own,
+    as the horizontal run between one movement's exit and the next one's
+    entry at the same chainage. Times are seconds, matching the replay feed,
+    so the graph needs no special case for freight.
+    """
+    km = {s.code: s.cum_km for s in graph.stations}
+    out: list[dict] = []
+    for t in plan.trains:
+        moves = t.ordered()
+        if not moves:
+            continue
+        pts: list[list[float]] = []
+
+        def add(seconds: float, chainage: float) -> None:
+            if pts and pts[-1][0] == seconds and pts[-1][1] == chainage:
+                return
+            pts.append([round(seconds, 1), round(chainage, 3)])
+
+        for mv in moves:
+            a, b = km.get(mv.from_station), km.get(mv.to_station)
+            if a is None or b is None:
+                continue
+            add(mv.enter * 60.0, a)
+            add(mv.exit * 60.0, b)
+        if len(pts) < 2:
+            continue
+        out.append({
+            "id": t.id,
+            "type": t.train_class,
+            "dir": t.direction.value,
+            "pts": pts,
+            "holds": [{"station": h.station, "line": h.line,
+                       "from": round(h.arrive * 60.0, 1),
+                       "to": round(h.depart * 60.0, 1),
+                       "km": km.get(h.station), "reason": h.reason}
+                      for h in t.holds if h.station in km],
+        })
+    return out

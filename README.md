@@ -25,27 +25,40 @@ these figures with `python analysis/baseline.py`.
 ## Repository layout
 
 ```
-analysis/
-  baseline.py            historical throughput baseline from goods movement records
-  scenario_demo.py       worked example: greedy dispatch vs look-ahead planning
-  check_osm_coverage.py  verifies OpenStreetMap coverage of the corridor
-  build_corridor.py      extracts track geometry from cached OSM data
-  build_linref.py        merges it into one chainage-addressable reference line
-  build_basemap.py       fetches offline basemap context layers
-  build_replay.py        turns the timetable into a chainage-over-time feed
-pravah/
+pravah/                  the system
   section.py             operational model: blocks, lines, capacities, timings
+  demand.py              the rakes awaiting dispatch
+  timetable.py           scheduled services as fixed obstacles
+  optimise.py            CP-SAT freight path optimisation
+  verify.py              independent checking, and the KPIs
+  plan.py                the contract between optimiser and verifier
   corridor.py            linear referencing: chainage -> geographic position
+  replay.py              simulation clock and train-state source
+  api.py                 service: REST, websocket feed, optimise endpoint
+analysis/                one-shot builders and validators
+  baseline.py            measured throughput baseline from the goods log
+  build_freight_demand.py  inverts recorded movements into demand
+  build_corridor.py      track geometry from cached OSM data
+  build_linref.py        one chainage-addressable reference line
+  build_basemap.py       offline basemap context layers
+  build_replay.py        the timetable as a chainage-over-time feed
+  calibrate_running_times.py  modelled times against the schedule
+  check_section_graph.py verifies the section model
+  check_verifier.py      verifies the verifier, against the real timetable
+  evaluate.py            optimised plans against recorded operations
+  scenario_demo.py       worked example: greedy vs look-ahead dispatch
+tests/                   pytest; mostly deliberately broken plans
 web/
-  index.html             offline corridor viewer (MapLibre)
+  index.html             corridor map
+  graph.html             train graph, with the optimiser's output on it
   vendor/                MapLibre GL, vendored so nothing loads from a CDN
-  data/replay.json       one day of train movements
+config/verifier.toml     every verification threshold
 data/
   ktv-psa/               official ICMS infrastructure and schedule extracts
-  osm/                   derived corridor geometry and basemap (see Licensing)
+  osm/                   derived corridor geometry and basemap
+  derived/               demand, calibration, evaluation
 docs/
   make_synopsis.py       generates the project synopsis
-  PRAVAH_Synopsis.docx   generated output
 ```
 
 ## The views
@@ -61,8 +74,17 @@ so a conflict is two lines meeting. Station dwells show as short horizontal
 runs. Drag to pan, wheel to zoom the time axis, hover for detail, click to
 isolate a path, double-click to move the clock.
 
-This is where precedence and crossings will be read once the optimiser lands:
-freight paths threading the gaps, with conflicts marked.
+![optimised plan](docs/train_graph_optimised.png)
+
+Press **optimise freight** and the optimiser plans the visible window: freight
+paths appear in green threading the gaps between the fixed services, holds show
+as thick horizontal runs where a rake is stood aside, and anything the verifier
+objects to is marked. The strip along the bottom reports what it cost —
+dispatched against offered, the optimality gap at each lexicographic stage,
+detention, line utilisation, and whether the plan verified clean.
+
+The freight slopes are shallower than the passenger ones because they are:
+roughly 31 km/h against 60–125.
 
 ### Corridor map — `/web/`
 
@@ -110,6 +132,7 @@ and would need a server.
 | `GET /api/corridor` | stations, polyline, chainage mapping |
 | `GET /api/state?t=` | train states at one instant (polling fallback) |
 | `WS /ws/live` | pushed state at 4 Hz, plus `play` / `pause` / `seek` / `speed` |
+| `POST /api/optimise` | plan freight for a window; returns paths, violations and KPIs |
 
 State is shaped the way a live feed would be, so a real COA or FOIS source can
 replace `ReplaySource` without the clock, the socket or the viewer changing:

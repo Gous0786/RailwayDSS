@@ -104,6 +104,19 @@ class Hub:
 
 hub = Hub()
 
+_SECTION = {}
+
+
+def _graph():
+    """Section graph, built once. Loading it costs a second or so."""
+    if "g" not in _SECTION:
+        try:
+            from .section import SectionGraph
+            _SECTION["g"] = SectionGraph.load()
+        except Exception:  # noqa: BLE001
+            _SECTION["g"] = None
+    return _SECTION["g"]
+
 
 @app.on_event("startup")
 async def _startup() -> None:
@@ -163,6 +176,81 @@ async def paths() -> JSONResponse:
         "time_span": s.span,
         "trains": [{"id": p.id, "type": p.type, "dir": p.dir, "pts": p.pts}
                    for p in s.paths],
+    })
+
+
+@app.post("/api/optimise")
+def optimise(body: dict | None = None) -> JSONResponse:
+    """Plan freight through a window and report what it costs.
+
+    Deliberately a sync def: CP-SAT blocks for tens of seconds, so FastAPI
+    runs this in a worker thread rather than stalling the event loop and the
+    live feed along with it.
+
+    Body (all optional):
+        day        "2025-08-01", else the busiest
+        from_min   window start, default 360
+        to_min     window end, default 720
+        limit_s    seconds per lexicographic stage, default 20
+        tolerance  minutes a scheduled service may move, default 0
+    """
+    body = body or {}
+    try:
+        from .demand import DemandBook
+        from .optimise import Optimiser, OptimiserConfig
+        from .plan import Plan as PlanT
+        from .plan import plan_to_paths
+        from .timetable import scheduled_plan
+        from .verify import Verifier, VerifierConfig
+    except Exception as e:  # noqa: BLE001
+        return JSONResponse({"error": f"optimiser unavailable: {e}"}, status_code=503)
+
+    if not hub.corridor:
+        return JSONResponse({"error": hub.error or "not loaded"}, status_code=503)
+
+    graph = _graph()
+    if graph is None:
+        return JSONResponse({"error": "section graph unavailable"}, status_code=503)
+
+    a = float(body.get("from_min", 360.0))
+    b = float(body.get("to_min", 720.0))
+    limit = float(body.get("limit_s", 20.0))
+    tolerance = float(body.get("tolerance", 0.0))
+
+    book = DemandBook.load()
+    day = book.day(body["day"]) if body.get("day") else book.busiest()
+    window = day.between(a, b)
+    fixed = scheduled_plan(graph)
+
+    cfg = OptimiserConfig(horizon_start_min=max(0.0, a - 30.0),
+                          horizon_end_min=b + 180.0,
+                          time_limit_s=limit,
+                          service_tolerance_min=tolerance)
+    plan, report = Optimiser(graph, cfg).solve(window, fixed)
+
+    vcfg = VerifierConfig.load()
+    vcfg.assume_unknown_line_fits = True
+    vcfg.service_tolerance_min = tolerance
+    baseline = {str(v) for v in Verifier(graph, vcfg).verify(fixed).errors}
+    combined = PlanT(trains=plan.trains + fixed.trains, horizon=plan.horizon)
+    checked = Verifier(graph, vcfg).verify(combined)
+    introduced = [v for v in checked.errors if str(v) not in baseline]
+
+    return JSONResponse({
+        "day": day.day,
+        "window": [a, b],
+        "offered": report.offered,
+        "dispatched": report.dispatched,
+        "seconds": round(report.seconds, 1),
+        "stages": [{"name": s.name, "status": s.status,
+                    "objective": s.objective, "gap_pct": s.gap_pct,
+                    "seconds": round(s.seconds, 1)} for s in report.stages],
+        "paths": plan_to_paths(graph, plan),
+        "violations": [{"kind": v.kind.value, "severity": v.severity.value,
+                        "detail": v.detail, "trains": list(v.trains),
+                        "resource": v.resource, "at": v.at}
+                       for v in introduced],
+        "kpis": checked.kpis.to_dict(),
     })
 
 
