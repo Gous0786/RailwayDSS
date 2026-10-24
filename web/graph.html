@@ -26,9 +26,10 @@
   button:hover,a.btn:hover{border-color:var(--dn)}
   button.on{background:var(--dn);border-color:var(--dn);color:#06121f}
   #cv{flex:1;display:block;width:100%;cursor:crosshair}
-  footer{flex:none;display:flex;gap:16px;align-items:center;height:26px;
-    padding:0 14px;border-top:1px solid var(--line);background:var(--panel);
-    color:var(--dim);font-size:11px;overflow:hidden}
+  footer{flex:none;display:flex;gap:13px;align-items:center;min-height:26px;
+    padding:3px 14px;border-top:1px solid var(--line);background:var(--panel);
+    color:var(--dim);font-size:10.5px;flex-wrap:wrap}
+  footer .hint{margin-left:auto}
   .sw{display:inline-block;width:16px;height:3px;border-radius:2px;
     vertical-align:middle;margin-right:5px}
   #tip{position:absolute;pointer-events:none;background:var(--panel);
@@ -70,6 +71,25 @@
   .pill{display:inline-block;padding:1px 6px;border-radius:9px;font-size:9px;
     background:#21262d;border:1px solid var(--line);color:var(--dim);
     margin-left:5px}
+  /* disruption control */
+  #dis{position:absolute;top:52px;left:12px;width:286px;background:var(--panel);
+    border:1px solid var(--line);border-radius:6px;padding:11px 12px;
+    display:none;z-index:6;font-size:11px}
+  #dis.open{display:block}
+  #dis h3{margin:0 0 8px;font-size:10px;letter-spacing:.09em;
+    text-transform:uppercase;color:#6b7684;font-weight:600}
+  #dis label{display:block;color:var(--dim);margin:7px 0 2px;font-size:10px}
+  #dis select,#dis input{width:100%;background:#0d1117;color:var(--text);
+    border:1px solid var(--line);border-radius:4px;padding:4px 6px;font:inherit}
+  #dis .row2{display:flex;gap:7px}
+  #dis .row2>div{flex:1}
+  #dis .act{display:flex;gap:7px;margin-top:10px}
+  .closure{display:flex;align-items:center;gap:6px;background:#2a1d1d;
+    border:1px solid #5a2b2b;border-radius:4px;padding:4px 7px;margin:5px 0;
+    color:#ffb4a8;font-size:10px}
+  .closure button{margin-left:auto;background:none;border:none;color:#ffb4a8;
+    cursor:pointer;font-size:13px;line-height:1;padding:0 2px}
+  #dis .none{color:var(--dim);font-style:italic;font-size:10px}
 </style>
 </head>
 <body>
@@ -85,6 +105,7 @@
     <button class="spd" data-s="900">900×</button>
     <button id="fit">reset zoom</button>
     <button id="opt">◆ optimise freight</button>
+    <button id="disbtn">⚠ disruption</button>
     <button id="toggle" class="on" title="show or hide the planned freight">freight</button>
     <a class="btn" href="./">map view →</a>
     <div id="clock">--:--<small id="daytag"></small></div>
@@ -96,8 +117,25 @@
     <span><i class="sw" style="background:var(--freight)"></i>freight</span>
     <span id="stats"></span>
     <span id="kpis"></span>
-    <span style="margin-left:auto">drag to pan · wheel to zoom time · steeper line = faster train</span>
+    <span class="hint">drag to pan · wheel to zoom · steeper = faster</span>
   </footer>
+</div>
+<div id="dis">
+  <h3>close a line</h3>
+  <label>link</label>
+  <select id="dis-link"></select>
+  <label>line</label>
+  <select id="dis-line"></select>
+  <div class="row2">
+    <div><label>from</label><input id="dis-from" type="time" value="08:00"></div>
+    <div><label>to</label><input id="dis-to" type="time" value="12:00"></div>
+  </div>
+  <div class="act">
+    <button id="dis-add">add closure</button>
+    <button id="dis-clear">clear all</button>
+  </div>
+  <h3 style="margin-top:12px">active</h3>
+  <div id="dis-list"><div class="none">none — the section is intact</div></div>
 </div>
 <div class="panel" id="rec">
   <header>
@@ -162,6 +200,9 @@ window.onerror = (m,s,l,c) => fail("JS error: "+m+"  @"+l+":"+c);
   let showFreight = true;
   let reasons = {};           // train id -> why it was held where it was
   let spotlight = null;       // a blocking service, highlighted on hover
+  let closures = [];          // lines withdrawn from traffic
+  let singleLine = [];        // links left with one line, where crossings arise
+  let linkIndex = [];         // the section's links and their running lines
 
   function resize(){
     const r = cv.getBoundingClientRect(), dpr = devicePixelRatio || 1;
@@ -236,6 +277,28 @@ window.onerror = (m,s,l,c) => fail("JS error: "+m+"  @"+l+":"+c);
         ctx.textAlign = "left"; ctx.textBaseline = "bottom";
         const p = tr.pts[0];
         ctx.fillText(tr.id+" "+tr.type, x(p[0])+4, y(p[1])-3);
+      }
+    }
+
+    // a withdrawn line, shaded over the stretch and the hours it affects
+    for (const c of closures){
+      const link = (c.resource || "").split(":")[0];
+      const parts = link.split("-");
+      const a = stations.find(s => s.code === parts[0]);
+      const b = stations.find(s => s.code === parts[1]);
+      if (!a || !b) continue;
+      const x0 = x(c.start*60), x1 = x(c.end*60);
+      const y0 = y(Math.min(a.cum_km, b.cum_km)), y1 = y(Math.max(a.cum_km, b.cum_km));
+      ctx.fillStyle = "rgba(248,81,73,0.13)";
+      ctx.fillRect(x0, y0, Math.max(1, x1-x0), Math.max(2, y1-y0));
+      ctx.strokeStyle = "rgba(248,81,73,0.5)";
+      ctx.lineWidth = 1;
+      ctx.strokeRect(x0+.5, y0+.5, Math.max(1, x1-x0), Math.max(2, y1-y0));
+      if (x1 - x0 > 70){
+        ctx.fillStyle = "#ff8a80";
+        ctx.font = "10px ui-monospace,Menlo,Consolas,monospace";
+        ctx.textAlign = "left"; ctx.textBaseline = "top";
+        ctx.fillText("⚠ " + c.resource + " closed", x0 + 5, y0 + 3);
       }
     }
 
@@ -476,6 +539,63 @@ window.onerror = (m,s,l,c) => fail("JS error: "+m+"  @"+l+":"+c);
   }, {passive:false});
   document.getElementById("fit").onclick = () => { [t0,t1]=SPAN0; draw(); };
 
+  /* ---------- disruption: withdraw a line from traffic ---------- */
+  const dis = document.getElementById("dis");
+  const selLink = document.getElementById("dis-link");
+  const selLine = document.getElementById("dis-line");
+  const hhToMin = v => { const [h,m] = v.split(":").map(Number); return h*60 + m; };
+  const minToHH = v => String(Math.floor(v/60)).padStart(2,"0") + ":" +
+                       String(Math.round(v%60)).padStart(2,"0");
+
+  document.getElementById("disbtn").onclick = () => {
+    dis.classList.toggle("open");
+    document.getElementById("disbtn").classList.toggle("on", dis.classList.contains("open"));
+  };
+
+  fetch("/api/lines").then(r => r.json()).then(d => {
+    linkIndex = d.links || [];
+    selLink.innerHTML = linkIndex.map(l =>
+      '<option value="' + l.link + '">' + l.link + "  (" +
+      l.length_km.toFixed(1) + " km, " + l.lines.length + " lines)</option>").join("");
+    fillLines();
+  }).catch(() => {});
+
+  function fillLines(){
+    const l = linkIndex.find(x => x.link === selLink.value) || linkIndex[0];
+    if (!l) return;
+    selLine.innerHTML = l.lines.map(ln =>
+      '<option value="' + ln.resource + '">' + ln.name + " (" + ln.signalling +
+      ")</option>").join("");
+  }
+  selLink.onchange = fillLines;
+
+  function renderClosures(){
+    const box = document.getElementById("dis-list");
+    if (!closures.length){
+      box.innerHTML = '<div class="none">none — the section is intact</div>';
+      return;
+    }
+    box.innerHTML = closures.map((c, i) =>
+      '<div class="closure">⚠ ' + c.resource + " · " + minToHH(c.start) + "–" +
+      minToHH(c.end) + '<button data-i="' + i + '">×</button></div>').join("");
+    box.querySelectorAll("button").forEach(b => b.onclick = () => {
+      closures.splice(+b.dataset.i, 1); renderClosures(); draw();
+    });
+  }
+
+  document.getElementById("dis-add").onclick = () => {
+    const from = hhToMin(document.getElementById("dis-from").value);
+    const to = hhToMin(document.getElementById("dis-to").value);
+    if (!(to > from)) return;
+    closures.push({resource: selLine.value, start: from, end: to,
+                   reason: "engineering block"});
+    renderClosures();
+    draw();
+  };
+  document.getElementById("dis-clear").onclick = () => {
+    closures = []; singleLine = []; renderClosures(); draw();
+  };
+
   /* ---------- ask the optimiser to plan the visible window ---------- */
   const optBtn = document.getElementById("opt");
   const kpiBox = document.getElementById("kpis");
@@ -496,7 +616,8 @@ window.onerror = (m,s,l,c) => fail("JS error: "+m+"  @"+l+":"+c);
       const res = await fetch("/api/optimise", {
         method: "POST",
         headers: {"Content-Type": "application/json"},
-        body: JSON.stringify({from_min: from, to_min: to, limit_s: 15}),
+        body: JSON.stringify({from_min: from, to_min: to, limit_s: 15,
+                              closures: closures}),
       });
       if (!res.ok) throw new Error("HTTP " + res.status);
       const d = await res.json();
@@ -505,6 +626,7 @@ window.onerror = (m,s,l,c) => fail("JS error: "+m+"  @"+l+":"+c);
       freight = d.paths || [];
       violations = d.violations || [];
       reasons = d.explain || {};
+      singleLine = d.single_line || [];
       window.__reasons = reasons;
       showFreight = true;
       document.getElementById("toggle").classList.add("on");
@@ -512,11 +634,14 @@ window.onerror = (m,s,l,c) => fail("JS error: "+m+"  @"+l+":"+c);
       const gap = (d.stages || []).map(s => (s.gap_pct || 0).toFixed(0) + "%").join("/");
       const k = d.kpis || {};
       kpiBox.innerHTML =
-        "<b style='color:#3fb950'>" + d.dispatched + "/" + d.offered + " freight</b>" +
-        " · gaps " + gap +
-        " · detention " + Math.round(k.detention_min || 0) + "m" +
-        " · utilisation " + (k.utilization_pct || 0).toFixed(1) + "%" +
+        "<b style='color:#3fb950'>" + d.dispatched + "/" + d.offered + "</b> freight" +
+        " · gap " + gap +
+        " · det " + Math.round(k.detention_min || 0) + "m" +
+        " · util " + (k.utilization_pct || 0).toFixed(0) + "%" +
         " · " + d.seconds + "s" +
+        (singleLine.length
+          ? " · <b style='color:#ffb84a'>⚠ single line " + singleLine.join(",") + "</b>"
+          : "") +
         (violations.length
           ? " · <b style='color:#f85149'>" + violations.length + " violation(s)</b>"
           : " · <span style='color:#3fb950'>verified clean</span>");

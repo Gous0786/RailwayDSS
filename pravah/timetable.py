@@ -35,12 +35,24 @@ def _overlaps(busy: list[tuple[float, float]], a: float, b: float) -> bool:
 
 
 def _free_line(g: SectionGraph, link: str, direction: Direction,
-               a: float, b: float, busy) -> str | None:
-    lines = [ln for ln in g.links[link].lines
-             if ln.nominal_direction in (direction, Direction.BOTH)]
-    for ln in lines or list(g.links[link].lines):
+               a: float, b: float, busy, closed: set[str] | None = None) -> str | None:
+    closed = closed or set()
+    all_lines = g.links[link].lines
+    usable = [ln for ln in all_lines if f"{link}:{ln.name}" not in closed]
+    own = [ln for ln in usable
+           if ln.nominal_direction in (direction, Direction.BOTH)]
+    for ln in own or usable:
         if not _overlaps(busy[f"{link}:{ln.name}"], a, b):
             return ln.name
+    # Nothing free. If this direction still has a line of its own, the train
+    # simply cannot be placed and is skipped, as before - forcing it onto a
+    # busy line would manufacture conflicts the railway never had. Only when
+    # every line for this direction is CLOSED is the remaining line shared,
+    # which is single-line working and genuinely what happens.
+    own_all = [ln for ln in all_lines
+               if ln.nominal_direction in (direction, Direction.BOTH)]
+    if own_all and all(f"{link}:{ln.name}" in closed for ln in own_all) and usable:
+        return usable[0].name
     return None
 
 
@@ -63,8 +75,16 @@ def _free_platform(g: SectionGraph, code: str, direction: Direction,
 
 
 def scheduled_plan(g: SectionGraph, path: Path | str = REPLAY,
-                   rake_length_m: float = PASSENGER_RAKE_M) -> Plan:
-    """Build the day's scheduled services as a Plan of fixed movements."""
+                   rake_length_m: float = PASSENGER_RAKE_M,
+                   closures=()) -> Plan:
+    """Build the day's scheduled services as a Plan of fixed movements.
+
+    Closures apply to scheduled services too. A line withdrawn for an
+    engineering block does not carry passenger trains either, so they are
+    re-platformed onto what remains - which is what puts opposing traffic on
+    one line and forces crossings.
+    """
+    closed = {c.resource for c in closures}
     p = Path(path)
     if not p.exists():
         raise FileNotFoundError(f"{p} not found - run analysis/build_replay.py")
@@ -103,7 +123,7 @@ def scheduled_plan(g: SectionGraph, path: Path | str = REPLAY,
                 ok = False
                 break
             link = g.link(c1, c2).id
-            chosen = _free_line(g, link, direction, d1, a2, line_busy)
+            chosen = _free_line(g, link, direction, d1, a2, line_busy, closed)
             if chosen is None:
                 ok = False
                 break

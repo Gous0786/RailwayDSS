@@ -86,6 +86,27 @@ detention, line utilisation, and whether the plan verified clean.
 The freight slopes are shallower than the passenger ones because they are:
 roughly 31 km/h against 60–125.
 
+### Disruption, and where crossings come from
+
+![disruption](docs/disruption.png)
+
+The corridor is double or triple track throughout, so two trains can always
+pass and a **crossing can never arise** — which is awkward, because the
+problem statement asks for precedence *and* crossings. Withdraw a line and it
+does: both directions are left sharing what remains, and opposing movements
+have to be crossed at a station.
+
+Press **disruption**, pick a link, a line and a window, and re-optimise. The
+closure is shaded on the chart, the strip reports which links have been
+reduced to single-line working, and the cost shows up immediately — closing
+VZM–NML:DN for four hours takes dispatch from 103 rakes to 72.
+
+A closure applies to scheduled services too: a line withdrawn for an
+engineering block does not carry passenger trains either. Where that leaves
+two opposing services on one line, the conflict is reported against the
+baseline rather than blamed on the freight plan — the passenger timetable is
+fixed, so the optimiser cannot resolve it and does not pretend to.
+
 ### Why a rake was held
 
 ![recommendation panel](docs/recommendation_panel.png)
@@ -159,7 +180,8 @@ and would need a server.
 | `GET /api/corridor` | stations, polyline, chainage mapping |
 | `GET /api/state?t=` | train states at one instant (polling fallback) |
 | `WS /ws/live` | pushed state at 4 Hz, plus `play` / `pause` / `seek` / `speed` |
-| `POST /api/optimise` | plan freight for a window; returns paths, violations and KPIs |
+| `POST /api/optimise` | plan freight for a window; returns paths, violations, KPIs and explanations |
+| `GET /api/lines` | every running line, so one can be chosen to close |
 
 State is shaped the way a live feed would be, so a real COA or FOIS source can
 replace `ReplaySource` without the clock, the socket or the viewer changing:

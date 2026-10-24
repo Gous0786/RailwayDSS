@@ -49,6 +49,27 @@ from .section import (ABSOLUTE_CLEARANCE_MIN, Direction, SectionGraph,
 SEC = 60.0          # the model works in integer seconds
 
 
+def _merge(spans: list[tuple[int, int]]) -> list[tuple[int, int]]:
+    """Collapse overlapping spans into their union.
+
+    Scheduled services are constants. If a closure has pushed two of them
+    onto one line so that they overlap, constraining them against each other
+    makes the model unsatisfiable rather than merely tight. Merging means
+    freight still has to avoid the whole occupied period, while the conflict
+    between the two fixed services - which the optimiser cannot resolve and
+    did not cause - is left to the verifier to report.
+    """
+    if not spans:
+        return []
+    out = []
+    for a, b in sorted(spans):
+        if out and a <= out[-1][1]:
+            out[-1] = (out[-1][0], max(out[-1][1], b))
+        else:
+            out.append((a, b))
+    return out
+
+
 @dataclass
 class OptimiserConfig:
     """Everything tunable about the search."""
@@ -147,7 +168,14 @@ class Optimiser:
 
     # ------------------------------------------------------------- routing
     def _route(self, rake: Rake) -> list[tuple[str, str, str, str]]:
-        """(link, line, from, to) for each leg, or [] if not routable."""
+        """(link, line, from, to) for each leg, or [] if not routable.
+
+        A train normally keeps to its own direction's line. When that line is
+        closed it takes whatever remains, which is single-line working: the
+        remaining line then carries both directions and opposing movements
+        have to be crossed at a station. That is how a closure produces a
+        crossing decision on a corridor that is double track throughout.
+        """
         order = [s.code for s in self.g.stations]
         try:
             i, j = order.index(rake.entry_station), order.index(rake.exit_station)
@@ -161,13 +189,15 @@ class Optimiser:
             a, b = order[k], order[k + step]
             link = self.g.link(a, b).id
             d = self.g.direction_of(a, b)
-            lines = [ln for ln in self.g.links[link].lines
-                     if ln.nominal_direction in (d, Direction.BOTH)]
-            if not lines:
-                lines = list(self.g.links[link].lines)
-            if not lines:
-                return []
-            chain.append((link, lines[0].name, a, b))
+            everything = list(self.g.links[link].lines)
+            open_lines = [ln for ln in everything
+                          if not self._closed(f"{link}:{ln.name}",
+                                              self.cfg.start_s, self.cfg.end_s)]
+            if not open_lines:
+                return []                       # the link is shut entirely
+            own = [ln for ln in open_lines
+                   if ln.nominal_direction in (d, Direction.BOTH)]
+            chain.append((link, (own or open_lines)[0].name, a, b))
         return chain
 
     def _closed(self, resource: str, a: int, b: int) -> bool:
@@ -222,22 +252,20 @@ class Optimiser:
                 tau = max(1, math.ceil(
                     self.g.running_time(link, line, "FREIGHT", d) * SEC))
                 resource = f"{link}:{line}"
-                if self._closed(resource, H0, H1):
-                    feasible = False
-                    break
                 enter = m.NewIntVar(H0, H1, f"in[{rake.id},{link}]")
                 leave = m.NewIntVar(H0, H1, f"out[{rake.id},{link}]")
                 m.Add(leave == enter + tau)
                 ln = self.g.line(link, line)
-                # A line worked in both directions - a MID road, or any line
-                # under single-line working - cannot hold OPPOSING movements
-                # at once. Same-direction following stays legal under the
-                # signalling rules, so only opposing pairs are excluded.
-                if ln.nominal_direction is Direction.BOTH:
-                    bidi_intervals.setdefault(resource, {}).setdefault(
-                        d, []).append(
-                        m.NewOptionalIntervalVar(enter, tau, leave, z,
-                                                 f"bidi[{rake.id},{link}]"))
+                # Any line that ends up carrying both directions - a MID
+                # road, or an up line taking down traffic because the down
+                # line is closed - cannot hold OPPOSING movements at once.
+                # Which lines those are is not known until every train has
+                # been routed, so record the direction here and add the
+                # exclusions afterwards. Same-direction following stays legal.
+                bidi_intervals.setdefault(resource, {}).setdefault(
+                    d, []).append(
+                    m.NewOptionalIntervalVar(enter, tau, leave, z,
+                                             f"bidi[{rake.id},{link}]"))
                 if ln.signalling is Signalling.ABSOLUTE:
                     # Occupy for the traversal plus the time needed to prove
                     # the section clear, so the next train cannot be admitted
@@ -297,9 +325,9 @@ class Optimiser:
         # ---- resources ---------------------------------------------------
         clear_s = int(round(ABSOLUTE_CLEARANCE_MIN * SEC))
         for resource, intervals in line_intervals.items():
-            for a, b in busy.get(resource, []):
-                span = max(1, b - a) + clear_s
-                intervals.append(m.NewIntervalVar(a, span, a + span,
+            padded = [(a, b + clear_s) for a, b in busy.get(resource, [])]
+            for a, b in _merge(padded):
+                intervals.append(m.NewIntervalVar(a, max(1, b - a), b,
                                                   f"fix[{resource},{a}]"))
             if len(intervals) > 1:
                 m.AddNoOverlap(intervals)
@@ -307,37 +335,44 @@ class Optimiser:
         for resource, stubs in stub_intervals.items():
             link, _, line = resource.partition(":")
             head = max(1, math.ceil(self.g.headway(link, line) * SEC))
-            for a, _b in busy.get(resource, []):
-                stubs.append(m.NewIntervalVar(a, head, a + head,
+            for a, b in _merge([(x, x + head) for x, _y in busy.get(resource, [])]):
+                stubs.append(m.NewIntervalVar(a, max(1, b - a), b,
                                               f"fixhw[{resource},{a}]"))
             if len(stubs) > 1:
                 m.AddNoOverlap(stubs)
 
         # Bidirectional lines: forbid opposing movements only. Fixed traffic
         # is added on the direction it actually ran.
+        # Scheduled services are constants, so a pair of them is never
+        # constrained here: if a closure has put two opposing services on one
+        # line, that is a conflict the optimiser cannot resolve and
+        # constraining it would simply make the model infeasible. Only pairs
+        # with at least one freight interval are excluded.
+        fixed_bidi: dict[str, dict] = {}
         if fixed:
             for t in fixed.trains:
                 for mv in t.movements:
-                    ln = self.g.line(mv.link, mv.line)
-                    if ln.nominal_direction is not Direction.BOTH:
-                        continue
                     a, b = int(mv.enter * SEC), int(mv.exit * SEC)
                     if b < H0 or a > H1:
                         continue
                     d = self.g.direction_of(mv.from_station, mv.to_station)
-                    bidi_intervals.setdefault(mv.resource, {}).setdefault(
+                    fixed_bidi.setdefault(mv.resource, {}).setdefault(
                         d, []).append(
                         m.NewIntervalVar(a, max(1, b - a), b,
                                          f"fixbidi[{mv.resource},{a}]"))
+
         opposing = 0
-        for resource, by_dir in bidi_intervals.items():
-            down = by_dir.get(Direction.DOWN, [])
-            up = by_dir.get(Direction.UP, [])
-            for iv_a in down:
-                for iv_b in up:
-                    m.AddNoOverlap([iv_a, iv_b])
-                    opposing += 1
-        report_opposing = opposing
+        for resource in set(bidi_intervals) | set(fixed_bidi):
+            free = bidi_intervals.get(resource, {})
+            fix = fixed_bidi.get(resource, {})
+            for d, other in ((Direction.DOWN, Direction.UP),
+                             (Direction.UP, Direction.DOWN)):
+                for iv_a in free.get(d, []):
+                    for iv_b in free.get(other, []) + fix.get(other, []):
+                        m.AddNoOverlap([iv_a, iv_b])
+                        opposing += 1
+            # each unordered freight pair was added once from each side
+        self.opposing_pairs = opposing
 
         longest = max((r.length_m for r in demand), default=686.0)
         for code, intervals in station_holds.items():

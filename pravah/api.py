@@ -193,6 +193,14 @@ def optimise(body: dict | None = None) -> JSONResponse:
         to_min     window end, default 720
         limit_s    seconds per lexicographic stage, default 20
         tolerance  minutes a scheduled service may move, default 0
+        closures   [{"resource": "VZM-NML:DN", "start": 480, "end": 720,
+                     "reason": "engineering block"}]
+
+    A closure applies to scheduled services as well as freight: a line
+    withdrawn for an engineering block does not carry passenger trains
+    either. That is what puts both directions on one line and makes crossings
+    a decision rather than an impossibility on a corridor that is double
+    track throughout.
     """
     body = body or {}
     try:
@@ -200,7 +208,7 @@ def optimise(body: dict | None = None) -> JSONResponse:
         from .explain import explain
         from .optimise import Optimiser, OptimiserConfig
         from .plan import Plan as PlanT
-        from .plan import plan_to_paths
+        from .plan import PlannedClosure, plan_to_paths
         from .timetable import scheduled_plan
         from .verify import Verifier, VerifierConfig
     except Exception as e:  # noqa: BLE001
@@ -218,15 +226,20 @@ def optimise(body: dict | None = None) -> JSONResponse:
     limit = float(body.get("limit_s", 20.0))
     tolerance = float(body.get("tolerance", 0.0))
 
+    shut = [PlannedClosure(c["resource"], float(c.get("start", 0.0)),
+                           float(c.get("end", 1440.0)), c.get("reason", ""))
+            for c in (body.get("closures") or [])]
+
     book = DemandBook.load()
     day = book.day(body["day"]) if body.get("day") else book.busiest()
     window = day.between(a, b)
-    fixed = scheduled_plan(graph)
+    fixed = scheduled_plan(graph, closures=shut)
 
     cfg = OptimiserConfig(horizon_start_min=max(0.0, a - 30.0),
                           horizon_end_min=b + 180.0,
                           time_limit_s=limit,
-                          service_tolerance_min=tolerance)
+                          service_tolerance_min=tolerance,
+                          closures=shut)
     plan, report = Optimiser(graph, cfg).solve(window, fixed)
 
     vcfg = VerifierConfig.load()
@@ -255,7 +268,27 @@ def optimise(body: dict | None = None) -> JSONResponse:
                        for v in introduced],
         "kpis": checked.kpis.to_dict(),
         "explain": {k: v.to_dict() for k, v in reasons.items()},
+        "closures": [c.to_dict() for c in shut],
+        "single_line": sorted({
+            mv.link for t in plan.trains + fixed.trains for mv in t.movements
+            if len([ln for ln in graph.links[mv.link].lines
+                    if not any(x.resource == f"{mv.link}:{ln.name}"
+                               and x.overlaps(mv.enter, mv.exit) for x in shut)]) == 1
+        }),
     })
+
+
+@app.get("/api/lines")
+async def lines() -> JSONResponse:
+    """Every running line, so the interface can offer one to close."""
+    g = _graph()
+    if g is None:
+        return JSONResponse({"error": "section graph unavailable"}, status_code=503)
+    return JSONResponse({"links": [
+        {"link": lid, "from": l.a, "to": l.b, "length_km": l.length_km,
+         "lines": [{"name": ln.name, "signalling": ln.signalling.value,
+                    "resource": ln.id} for ln in l.lines]}
+        for lid, l in g.links.items()]})
 
 
 @app.get("/api/state")
