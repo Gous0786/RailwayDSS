@@ -38,6 +38,38 @@
   #tip div{color:var(--dim)}
   #msg{position:absolute;inset:0;display:grid;place-items:center;
     background:var(--bg);z-index:9;color:var(--dim);padding:24px;text-align:center}
+  /* recommendation panel */
+  #rec{position:absolute;top:52px;right:12px;bottom:34px;width:360px;
+    background:var(--panel);border:1px solid var(--line);border-radius:6px;
+    display:none;flex-direction:column;z-index:6;overflow:hidden}
+  #rec.open{display:flex}
+  #rec header{display:flex;align-items:flex-start;gap:8px;padding:10px 12px;
+    border-bottom:1px solid var(--line);background:#1b2129}
+  #rec header h2{margin:0;font-size:12px;letter-spacing:.03em;word-break:break-all}
+  #rec header .sub{color:var(--dim);font-size:10px;margin-top:3px}
+  #rec .close{margin-left:auto;background:none;border:none;color:var(--dim);
+    font-size:17px;cursor:pointer;line-height:1;padding:0 2px}
+  #rec .close:hover{color:var(--text)}
+  #rec .body{overflow-y:auto;padding:10px 12px;font-size:11px}
+  #rec .kv{display:flex;justify-content:space-between;color:var(--dim);margin:2px 0}
+  #rec .kv b{color:var(--text);font-weight:600}
+  #rec h3{margin:12px 0 5px;font-size:10px;letter-spacing:.09em;
+    text-transform:uppercase;color:#6b7684;font-weight:600}
+  .hold{border-left:3px solid var(--freight);background:#19231c;
+    padding:7px 9px;margin:7px 0;border-radius:0 4px 4px 0}
+  .hold .why{color:#c9d6e4;line-height:1.5}
+  .blk{color:var(--dim);margin-top:5px;cursor:pointer;padding:3px 5px;
+    border-radius:3px;border:1px solid transparent}
+  .blk:hover{background:#21262d;border-color:var(--line);color:var(--text)}
+  .blk b{color:var(--up)}
+  .leg{display:flex;gap:7px;color:var(--dim);padding:1px 0;
+    font-variant-numeric:tabular-nums}
+  .leg .t{color:#7d8794;min-width:44px}
+  .note{color:var(--dim);line-height:1.5;background:#1d2228;padding:8px;
+    border-radius:4px;border-left:3px solid #6b7684}
+  .pill{display:inline-block;padding:1px 6px;border-radius:9px;font-size:9px;
+    background:#21262d;border:1px solid var(--line);color:var(--dim);
+    margin-left:5px}
 </style>
 </head>
 <body>
@@ -66,6 +98,16 @@
     <span id="kpis"></span>
     <span style="margin-left:auto">drag to pan · wheel to zoom time · steeper line = faster train</span>
   </footer>
+</div>
+<div class="panel" id="rec">
+  <header>
+    <div>
+      <h2 id="rec-id">—</h2>
+      <div class="sub" id="rec-sub"></div>
+    </div>
+    <button class="close" id="rec-close" title="close">×</button>
+  </header>
+  <div class="body" id="rec-body"></div>
 </div>
 <div id="tip"></div>
 <div id="msg">loading train graph…</div>
@@ -118,6 +160,8 @@ window.onerror = (m,s,l,c) => fail("JS error: "+m+"  @"+l+":"+c);
   let freight = [];           // planned paths, same shape as the services
   let violations = [];        // whatever the verifier found, if anything
   let showFreight = true;
+  let reasons = {};           // train id -> why it was held where it was
+  let spotlight = null;       // a blocking service, highlighted on hover
 
   function resize(){
     const r = cv.getBoundingClientRect(), dpr = devicePixelRatio || 1;
@@ -174,9 +218,10 @@ window.onerror = (m,s,l,c) => fail("JS error: "+m+"  @"+l+":"+c);
     for (const tr of trains){
       if (tr.pts[tr.pts.length-1][0] < t0 || tr.pts[0][0] > t1) continue;
       const sel = selected === tr.id, hov = hover && hover.id === tr.id;
-      ctx.strokeStyle = colour(tr);
-      ctx.globalAlpha = selected && !sel ? .18 : 1;
-      ctx.lineWidth = sel || hov ? 2.6 : 1.1;
+      const lit = spotlight === tr.id;      // a service named in the panel
+      ctx.strokeStyle = lit ? "#ffffff" : colour(tr);
+      ctx.globalAlpha = lit ? 1 : (selected && !sel ? .18 : 1);
+      ctx.lineWidth = lit ? 3.4 : (sel || hov ? 2.6 : 1.1);
       ctx.beginPath();
       let started = false;
       for (const [tt, km] of tr.pts){
@@ -309,8 +354,99 @@ window.onerror = (m,s,l,c) => fail("JS error: "+m+"  @"+l+":"+c);
     const r = cv.getBoundingClientRect();
     const p = pick(e.clientX-r.left, e.clientY-r.top);
     selected = p && selected !== p.id ? p.id : null;
+    if (selected && reasons[selected]) showRec(reasons[selected]);
+    else closeRec();
     draw();
   });
+
+  /* ---------- recommendation panel ---------- */
+  const rec = document.getElementById("rec");
+  const hm2 = s => hhmm(s)[0];
+
+  function closeRec(){ rec.classList.remove("open"); spotlight = null; draw(); }
+  document.getElementById("rec-close").onclick = () => {
+    selected = null; closeRec();
+  };
+
+  // exposed so automated checks can open the panel without a click
+  window.__show = x => showRec(x);
+  function showRec(x){
+    document.getElementById("rec-id").textContent = x.train_id;
+    const bits = [x.class, Math.round(x.length_m) + " m",
+                  x.dir === "DN" ? "down" : "up",
+                  x.entry + " → " + x.exit];
+    document.getElementById("rec-sub").textContent = bits.join(" · ");
+
+    const b = [];
+    if (x.dispatched_min == null){
+      b.push('<div class="note">' + x.note + "</div>");
+      if (x.ready_min != null)
+        b.push('<div class="kv"><span>offered</span><b>' +
+               hm2(x.ready_min*60) + "</b></div>");
+    } else {
+      const late = (x.ready_min != null)
+        ? Math.round(x.dispatched_min - x.ready_min) : null;
+      b.push('<div class="kv"><span>ready</span><b>' +
+             (x.ready_min != null ? hm2(x.ready_min*60) : "—") + "</b></div>");
+      b.push('<div class="kv"><span>dispatched</span><b>' + hm2(x.dispatched_min*60) +
+             (late != null ? ' <span class="pill">+' + late + "m</span>" : "") +
+             "</b></div>");
+      b.push('<div class="kv"><span>cleared</span><b>' + hm2(x.cleared_min*60) + "</b></div>");
+      b.push('<div class="kv"><span>transit</span><b>' +
+             Math.round(x.transit_min) + " min</b></div>");
+      b.push('<div class="kv"><span>detention</span><b>' +
+             Math.round(x.detention_min) + " min · " + x.holds.length +
+             " hold" + (x.holds.length === 1 ? "" : "s") + "</b></div>");
+
+      if (x.holds.length){
+        b.push("<h3>why it was held</h3>");
+        x.holds.forEach((h, i) => {
+          b.push('<div class="hold"><div class="why">' + h.detail + "</div>");
+          const seen = new Set();
+          for (const k of h.blockers){
+            if (seen.has(k.train)) continue;
+            seen.add(k.train);
+            b.push('<div class="blk" data-train="' + k.train + '">↳ <b>' +
+                   k.train + "</b> " + k.class + " · priority " + k.priority +
+                   " · " + k.kind.replace(/_/g, " ") + "</div>");
+          }
+          b.push("</div>");
+        });
+      } else {
+        b.push("<h3>why it was held</h3>");
+        b.push('<div class="note">Not held anywhere — it ran straight through.</div>');
+      }
+
+      b.push("<h3>journey</h3>");
+      for (const l of x.legs){
+        const h = x.holds.find(z => z.station === l.from);
+        if (h) b.push('<div class="leg"><span class="t">' + hm2(h.from_min*60) +
+                      '</span><span style="color:#3fb950">▣ held ' +
+                      Math.round(h.duration_min) + " min at " + h.station +
+                      " (" + h.line + ")</span></div>");
+        b.push('<div class="leg"><span class="t">' + hm2(l.enter_min*60) +
+               "</span><span>" + l.from + " → " + l.to +
+               '</span><span style="margin-left:auto;color:#6b7684">' +
+               (l.exit_min - l.enter_min).toFixed(1) + "m " + l.line + "</span></div>");
+      }
+    }
+
+    b.push("<h3>caveat</h3>");
+    b.push('<div class="note">This says what would break if the rake did not ' +
+           'wait here. It does not establish the hold was unavoidable — a ' +
+           'different plan might avoid it. Only re-solving with the hold ' +
+           'forbidden can settle that.</div>');
+
+    const body = document.getElementById("rec-body");
+    body.innerHTML = b.join("");
+    body.scrollTop = 0;
+    body.querySelectorAll(".blk").forEach(el => {
+      el.onmouseenter = () => { spotlight = el.dataset.train; draw(); };
+      el.onmouseleave = () => { spotlight = null; draw(); };
+      el.onclick = () => { selected = el.dataset.train; draw(); };
+    });
+    rec.classList.add("open");
+  }
 
   function segmentFor(km){
     for (let i=0;i<stations.length-1;i++)
@@ -368,6 +504,8 @@ window.onerror = (m,s,l,c) => fail("JS error: "+m+"  @"+l+":"+c);
 
       freight = d.paths || [];
       violations = d.violations || [];
+      reasons = d.explain || {};
+      window.__reasons = reasons;
       showFreight = true;
       document.getElementById("toggle").classList.add("on");
 

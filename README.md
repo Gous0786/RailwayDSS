@@ -86,6 +86,33 @@ detention, line utilisation, and whether the plan verified clean.
 The freight slopes are shallower than the passenger ones because they are:
 roughly 31 km/h against 60–125.
 
+### Why a rake was held
+
+![recommendation panel](docs/recommendation_panel.png)
+
+Click any planned freight path and the panel says what the plan did to it and
+why — when it was ready, when it was dispatched and how long it waited, then
+every hold with the reason behind it:
+
+> **Held 16 min at Urlam.** Running through would have obstructed **12246**
+> (Duronto, priority 2) and 1 other service on ULM–TIU:DN at 05:25 —
+> block conflict.
+
+Hovering a named service highlights its path on the chart, so the conflict is
+visible rather than asserted.
+
+**No separate reasoning engine was needed.** A hold exists precisely because
+running through would break something, so the explanation is the
+counterfactual: remove the hold, pull the later legs earlier, and re-verify.
+Whatever the verifier reports *is* the reason — already worded, already naming
+the train and the rule. It costs one verification sweep per hold, about 0.14 s
+for a whole window.
+
+The panel ends with the caveat, because it matters: this establishes **what
+would break if the rake did not wait here**, not that the hold was
+unavoidable. A different plan might avoid it, and only re-solving with the
+hold forbidden can settle that.
+
 ### Corridor map — `/web/`
 
 ![corridor viewer](docs/screenshot.png)

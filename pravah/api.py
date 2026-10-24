@@ -197,6 +197,7 @@ def optimise(body: dict | None = None) -> JSONResponse:
     body = body or {}
     try:
         from .demand import DemandBook
+        from .explain import explain
         from .optimise import Optimiser, OptimiserConfig
         from .plan import Plan as PlanT
         from .plan import plan_to_paths
@@ -236,6 +237,8 @@ def optimise(body: dict | None = None) -> JSONResponse:
     checked = Verifier(graph, vcfg).verify(combined)
     introduced = [v for v in checked.errors if str(v) not in baseline]
 
+    reasons = explain(graph, plan, fixed, vcfg, demand=window)
+
     return JSONResponse({
         "day": day.day,
         "window": [a, b],
@@ -251,6 +254,7 @@ def optimise(body: dict | None = None) -> JSONResponse:
                         "resource": v.resource, "at": v.at}
                        for v in introduced],
         "kpis": checked.kpis.to_dict(),
+        "explain": {k: v.to_dict() for k, v in reasons.items()},
     })
 
 
