@@ -14,7 +14,8 @@
   *{box-sizing:border-box}
   html,body{margin:0;height:100%;background:var(--bg);color:var(--text);
     font:13px/1.45 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;overflow:hidden}
-  #wrap{position:absolute;inset:0;display:flex;flex-direction:column}
+  #wrap{position:absolute;inset:0;display:flex;flex-direction:column;
+    min-height:0;overflow:hidden}
   header{display:flex;align-items:center;gap:14px;padding:7px 14px;flex:none;
     border-bottom:1px solid var(--line);background:var(--panel);flex:none}
   header h1{margin:0;font-size:14px;letter-spacing:.04em}
@@ -25,7 +26,7 @@
     border-radius:5px;padding:4px 10px;font:inherit;cursor:pointer;text-decoration:none}
   button:hover,a.btn:hover{border-color:var(--dn)}
   button.on{background:var(--dn);border-color:var(--dn);color:#06121f}
-  #cv{flex:1;display:block;width:100%;cursor:crosshair}
+  #cv{flex:1;display:block;width:100%;min-height:0;cursor:crosshair}
   footer{flex:none;display:flex;gap:13px;align-items:center;min-height:26px;
     padding:3px 14px;border-top:1px solid var(--line);background:var(--panel);
     color:var(--dim);font-size:10.5px;flex-wrap:wrap}
@@ -40,7 +41,8 @@
   #msg{position:absolute;inset:0;display:grid;place-items:center;
     background:var(--bg);z-index:9;color:var(--dim);padding:24px;text-align:center}
   /* recommendation panel */
-  #rec{position:absolute;top:52px;right:12px;bottom:34px;width:360px;
+  #rec{position:absolute;top:52px;right:12px;bottom:40px;width:360px;
+    max-height:calc(100vh - 92px);
     background:var(--panel);border:1px solid var(--line);border-radius:6px;
     display:none;flex-direction:column;z-index:6;overflow:hidden}
   #rec.open{display:flex}
@@ -74,7 +76,8 @@
   /* disruption control */
   #dis{position:absolute;top:52px;left:12px;width:286px;background:var(--panel);
     border:1px solid var(--line);border-radius:6px;padding:11px 12px;
-    display:none;z-index:6;font-size:11px}
+    display:none;z-index:6;font-size:11px;
+    max-height:calc(100vh - 100px);overflow-y:auto}
   #dis.open{display:block}
   #dis h3{margin:0 0 8px;font-size:10px;letter-spacing:.09em;
     text-transform:uppercase;color:#6b7684;font-weight:600}
@@ -206,7 +209,13 @@ window.onerror = (m,s,l,c) => fail("JS error: "+m+"  @"+l+":"+c);
 
   function resize(){
     const r = cv.getBoundingClientRect(), dpr = devicePixelRatio || 1;
-    cv.width = r.width * dpr; cv.height = r.height * dpr;
+    // pixel buffer in device pixels, display size in CSS pixels. Setting
+    // only the former makes the canvas its own intrinsic height on a scaled
+    // display, which a flex item will not shrink below.
+    cv.style.width = r.width + "px";
+    cv.style.height = r.height + "px";
+    cv.width = Math.max(1, Math.round(r.width * dpr));
+    cv.height = Math.max(1, Math.round(r.height * dpr));
     ctx.setTransform(dpr,0,0,dpr,0,0);
     draw();
   }
