@@ -38,6 +38,7 @@ pravah/                  the system
 analysis/                one-shot builders and validators
   baseline.py            measured throughput baseline from the goods log
   build_freight_demand.py  inverts recorded movements into demand
+  build_observed_freight.py  recorded freight paths, for the baseline overlay
   build_corridor.py      track geometry from cached OSM data
   build_linref.py        one chainage-addressable reference line
   build_basemap.py       offline basemap context layers
@@ -85,6 +86,52 @@ detention, line utilisation, and whether the plan verified clean.
 
 The freight slopes are shallower than the passenger ones because they are:
 roughly 31 km/h against 60–125.
+
+### The plan against the record
+
+Press **recorded** and the freight that actually ran that day is drawn over
+the same axes in dashed violet, at the same scale, with nothing rescaled
+between them. The planned paths are the steep green ones; the recorded paths
+are the ones with long flat stretches in them.
+
+```bash
+python analysis/build_observed_freight.py
+```
+
+The demand extract keeps only where each consignment joined the corridor and
+where it left. This recovers the part it discards — every intermediate
+arrival and departure — and emits it as chainage over time, the same shape as
+the replay feed. A station where departure is later than arrival becomes a
+flat run on the chart, so standing time is visible rather than averaged into
+a statistic.
+
+```
+rakes with a path      : 2460 over 27 days
+  dropped: {'inconsistent times': 119, 'single station': 608,
+            'implausible transit': 23}
+
+busiest day            : 2025-08-01  108 rakes, 26 end to end
+  median transit       : 268 min
+  median standing      : 86 min
+  standing share       : 47% of transit
+```
+
+That 47% is computed from the per-station records and arrives independently
+at roughly the 45% the throughput baseline measures a different way, which is
+a useful check on both.
+
+**119 consignments are dropped rather than repaired.** Their records have a
+rake leaving one station after it had already reached the next, and there is
+no way to tell which of the two timestamps is wrong. A path reconstructed
+over that contradiction would then be compared against the plan as though it
+were evidence, so it is left out and counted instead.
+
+Transit here is measured **arrival to arrival**, matching the demand
+extract's `observed_transit_min`, and standing time counts dwells up to the
+last arrival — a rake has cleared the section once it reaches its exit
+station, and what it does in the yard afterwards is not this section's
+business. `tests/test_observed.py` holds both invariants; both were written
+after the first version of this builder got them wrong.
 
 ### Disruption, and where crossings come from
 

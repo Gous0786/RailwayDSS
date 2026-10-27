@@ -179,6 +179,42 @@ async def paths() -> JSONResponse:
     })
 
 
+_OBSERVED: dict = {}
+
+
+def _observed_blob():
+    """Recorded freight paths, read once. Built offline, so just a file."""
+    if "d" not in _OBSERVED:
+        try:
+            p = ROOT / "data" / "derived" / "observed_freight.json"
+            _OBSERVED["d"] = json.loads(p.read_text(encoding="utf-8"))
+        except Exception:  # noqa: BLE001
+            _OBSERVED["d"] = None
+    return _OBSERVED["d"]
+
+
+@app.get("/api/observed")
+async def observed(day: str | None = None) -> JSONResponse:
+    """What the freight actually did, in the same shape as /api/paths.
+
+    The comparison the report needs is the recorded day against the planned
+    one on identical axes. Serving both as chainage over time means the graph
+    rescales nothing between them.
+    """
+    blob = _observed_blob()
+    if not blob or not blob.get("days"):
+        return JSONResponse(
+            {"error": "recorded freight unavailable - run "
+                      "analysis/build_observed_freight.py"}, status_code=503)
+    days = blob["days"]
+    key = day if day in days else max(
+        days, key=lambda d: days[d]["stats"]["rakes"])
+    rec = days[key]
+    return JSONResponse({"day": key, "note": blob["note"],
+                         "stats": rec["stats"], "trains": rec["trains"],
+                         "available": sorted(days)})
+
+
 @app.post("/api/optimise")
 def optimise(body: dict | None = None) -> JSONResponse:
     """Plan freight through a window and report what it costs.
