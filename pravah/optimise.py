@@ -70,6 +70,51 @@ def _merge(spans: list[tuple[int, int]]) -> list[tuple[int, int]]:
     return out
 
 
+def route_rake(graph: SectionGraph, rake: Rake,
+               closures: tuple[PlannedClosure, ...] | list[PlannedClosure] = (),
+               start_s: int = 0, end_s: int = 86400
+               ) -> list[tuple[str, str, str, str]]:
+    """(link, line, from, to) for each leg, or [] if not routable.
+
+    A train normally keeps to its own direction's line. When that line is
+    closed it takes whatever remains, which is single-line working: the
+    remaining line then carries both directions and opposing movements have
+    to be crossed at a station. That is how a closure produces a crossing
+    decision on a corridor that is double track throughout.
+
+    Module level, not a method, because the greedy baseline has to route
+    identically. A comparison between two schedulers means nothing if they
+    disagree about which line a rake would even take, so there is one
+    definition rather than two that can drift apart.
+    """
+    def shut(resource: str) -> bool:
+        return any(c.resource == resource
+                   and c.overlaps(start_s / SEC, end_s / SEC)
+                   for c in closures)
+
+    order = [s.code for s in graph.stations]
+    try:
+        i, j = order.index(rake.entry_station), order.index(rake.exit_station)
+    except ValueError:
+        return []
+    if i == j:
+        return []
+    step = 1 if j > i else -1
+    chain = []
+    for k in range(i, j, step):
+        a, b = order[k], order[k + step]
+        link = graph.link(a, b).id
+        d = graph.direction_of(a, b)
+        open_lines = [ln for ln in graph.links[link].lines
+                      if not shut(f"{link}:{ln.name}")]
+        if not open_lines:
+            return []                       # the link is shut entirely
+        own = [ln for ln in open_lines
+               if ln.nominal_direction in (d, Direction.BOTH)]
+        chain.append((link, (own or open_lines)[0].name, a, b))
+    return chain
+
+
 @dataclass
 class OptimiserConfig:
     """Everything tunable about the search."""
@@ -168,37 +213,8 @@ class Optimiser:
 
     # ------------------------------------------------------------- routing
     def _route(self, rake: Rake) -> list[tuple[str, str, str, str]]:
-        """(link, line, from, to) for each leg, or [] if not routable.
-
-        A train normally keeps to its own direction's line. When that line is
-        closed it takes whatever remains, which is single-line working: the
-        remaining line then carries both directions and opposing movements
-        have to be crossed at a station. That is how a closure produces a
-        crossing decision on a corridor that is double track throughout.
-        """
-        order = [s.code for s in self.g.stations]
-        try:
-            i, j = order.index(rake.entry_station), order.index(rake.exit_station)
-        except ValueError:
-            return []
-        if i == j:
-            return []
-        step = 1 if j > i else -1
-        chain = []
-        for k in range(i, j, step):
-            a, b = order[k], order[k + step]
-            link = self.g.link(a, b).id
-            d = self.g.direction_of(a, b)
-            everything = list(self.g.links[link].lines)
-            open_lines = [ln for ln in everything
-                          if not self._closed(f"{link}:{ln.name}",
-                                              self.cfg.start_s, self.cfg.end_s)]
-            if not open_lines:
-                return []                       # the link is shut entirely
-            own = [ln for ln in open_lines
-                   if ln.nominal_direction in (d, Direction.BOTH)]
-            chain.append((link, (own or open_lines)[0].name, a, b))
-        return chain
+        return route_rake(self.g, rake, self.cfg.closures,
+                          self.cfg.start_s, self.cfg.end_s)
 
     def _closed(self, resource: str, a: int, b: int) -> bool:
         return any(c.resource == resource and c.overlaps(a / SEC, b / SEC)

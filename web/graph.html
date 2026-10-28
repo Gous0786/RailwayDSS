@@ -10,7 +10,7 @@
     --bg:#0d1117; --panel:#161b22; --line:#30363d; --text:#e6edf3;
     --dim:#8b949e; --grid:#1c2430; --gridhour:#263040;
     --dn:#4aa8ff; --up:#ffb84a; --freight:#3fb950; --cursor:#f0f6fc;
-    --obs:#a371f7;
+    --obs:#a371f7; --greedy:#b6c2cf;
   }
   *{box-sizing:border-box}
   html,body{margin:0;height:100%;background:var(--bg);color:var(--text);
@@ -112,6 +112,7 @@
     <button id="disbtn">⚠ disruption</button>
     <button id="toggle" class="on" title="show or hide the planned freight">freight</button>
     <button id="obs" title="draw the recorded freight for the same day, on these axes">⟲ recorded</button>
+    <button id="base" title="dispatch the same rakes first-come-first-served, with no look-ahead">⊳ baseline</button>
     <a class="btn" href="./">map view →</a>
     <div id="clock">--:--<small id="daytag"></small></div>
   </header>
@@ -121,9 +122,11 @@
     <span><i class="sw" style="background:var(--up)"></i>up (PSA→KTV)</span>
     <span><i class="sw" style="background:var(--freight)"></i>freight</span>
     <span id="obslegend" style="display:none"><i class="sw" style="background:var(--obs)"></i>recorded</span>
+    <span id="baselegend" style="display:none"><i class="sw" style="background:var(--greedy)"></i>greedy</span>
     <span id="stats"></span>
     <span id="kpis"></span>
     <span id="cmp"></span>
+    <span id="basecmp"></span>
     <span class="hint">drag to pan · wheel to zoom · steeper = faster</span>
   </footer>
 </div>
@@ -217,6 +220,12 @@ window.onerror = (m,s,l,c) => fail("JS error: "+m+"  @"+l+":"+c);
   let observedDay = "";       // which calendar day that was
   let optimisedDay = "";      // the day the optimiser planned, so they match
   let showObserved = false;
+
+  /* the greedy baseline: the same rakes, dispatched without look-ahead */
+  let greedyPaths = [];
+  let greedyReport = null;
+  let showGreedy = false;
+  let lastReport = null;      // the optimiser's own counts, to difference against
 
   function resize(){
     const r = cv.getBoundingClientRect(), dpr = devicePixelRatio || 1;
@@ -331,6 +340,27 @@ window.onerror = (m,s,l,c) => fail("JS error: "+m+"  @"+l+":"+c);
       ctx.globalAlpha = .55;
       ctx.lineWidth = 1.3;
       for (const tr of observed){
+        if (tr.pts[tr.pts.length-1][0] < t0 || tr.pts[0][0] > t1) continue;
+        ctx.beginPath();
+        let started = false;
+        for (const [tt, km] of tr.pts){
+          const px = x(tt), py = y(km);
+          started ? ctx.lineTo(px, py) : (ctx.moveTo(px, py), started = true);
+        }
+        ctx.stroke();
+      }
+      ctx.setLineDash([]);
+      ctx.globalAlpha = 1;
+    }
+
+    // the same rakes dispatched without look-ahead. Drawn under the plan, so
+    // where the two diverge the plan is the line on top.
+    if (showGreedy && greedyPaths.length){
+      ctx.setLineDash([3,3]);
+      ctx.strokeStyle = "#b6c2cf";
+      ctx.globalAlpha = .75;
+      ctx.lineWidth = 1.5;
+      for (const tr of greedyPaths){
         if (tr.pts[tr.pts.length-1][0] < t0 || tr.pts[0][0] > t1) continue;
         ctx.beginPath();
         let started = false;
@@ -631,11 +661,12 @@ window.onerror = (m,s,l,c) => fail("JS error: "+m+"  @"+l+":"+c);
     if (!(to > from)) return;
     closures.push({resource: selLine.value, start: from, end: to,
                    reason: "engineering block"});
+    invalidateBaseline();
     renderClosures();
     draw();
   };
   document.getElementById("dis-clear").onclick = () => {
-    closures = []; singleLine = []; renderClosures(); draw();
+    closures = []; singleLine = []; invalidateBaseline(); renderClosures(); draw();
   };
 
   /* ---------- ask the optimiser to plan the visible window ---------- */
@@ -701,6 +732,81 @@ window.onerror = (m,s,l,c) => fail("JS error: "+m+"  @"+l+":"+c);
     }
   };
 
+  /* ---------- the greedy baseline: same rakes, no look-ahead ---------- */
+  const baseBtn = document.getElementById("base");
+  const baseBox = document.getElementById("basecmp");
+  const baseLegend = document.getElementById("baselegend");
+
+  async function fetchGreedy(from, to){
+    const res = await fetch("/api/optimise", {
+      method: "POST", headers: {"Content-Type": "application/json"},
+      body: JSON.stringify({from_min: from, to_min: to, mode: "greedy",
+                            closures: closures}),
+    });
+    if (!res.ok) throw new Error("HTTP " + res.status);
+    const d = await res.json();
+    if (d.error) throw new Error(d.error);
+    greedyPaths = d.paths || [];
+    greedyReport = {dispatched: d.dispatched, offered: d.offered,
+                    seconds: d.seconds,
+                    violations: (d.violations || []).length};
+  }
+
+  function renderBaseline(){
+    if (!greedyReport || !showGreedy){ baseBox.textContent = ""; return; }
+    const r = greedyReport;
+    // the whole point of the baseline is the difference, so show it; but
+    // only once the optimiser has run on the same window, or there is
+    // nothing honest to difference against
+    const d = lastReport ? lastReport.dispatched - r.dispatched : null;
+    baseBox.innerHTML =
+      "<b style='color:#9aa4b0'>greedy " + r.dispatched + "/" + r.offered +
+      "</b>" +
+      (d === null ? ""
+        : " · look-ahead " + (d >= 0 ? "+" : "") + d +
+          " rake" + (Math.abs(d) === 1 ? "" : "s")) +
+      " · " + r.seconds + "s" +
+      (r.violations
+        ? " · <b style='color:#f85149'>" + r.violations + " violation(s)</b>"
+        : " · <span style='color:#3fb950'>verified clean</span>");
+  }
+
+  function invalidateBaseline(){
+    // the section changed, so a baseline computed on the old one is a lie
+    greedyPaths = []; greedyReport = null; showGreedy = false;
+    baseBtn.classList.remove("on");
+    baseLegend.style.display = "none";
+    baseBox.textContent = "";
+  }
+
+  baseBtn.onclick = async () => {
+    if (greedyPaths.length){
+      showGreedy = !showGreedy;
+      baseBtn.classList.toggle("on", showGreedy);
+      baseLegend.style.display = showGreedy ? "" : "none";
+      renderBaseline();
+      draw();
+      return;
+    }
+    baseBtn.disabled = true;
+    baseBtn.textContent = "dispatching…";
+    try {
+      await fetchGreedy(Math.max(0, Math.floor(t0 / 60)),
+                        Math.min(1440, Math.ceil(t1 / 60)));
+      showGreedy = true;
+      baseBtn.classList.add("on");
+      baseLegend.style.display = "";
+      renderBaseline();
+      draw();
+    } catch (err){
+      baseBox.innerHTML = "<span style='color:#f85149'>baseline failed: " +
+                          err.message + "</span>";
+    } finally {
+      baseBtn.disabled = false;
+      baseBtn.textContent = "⊳ baseline";
+    }
+  };
+
   optBtn.onclick = async () => {
     const from = Math.max(0, Math.floor(t0 / 60));
     const to   = Math.min(1440, Math.ceil(t1 / 60));
@@ -729,6 +835,16 @@ window.onerror = (m,s,l,c) => fail("JS error: "+m+"  @"+l+":"+c);
       // the comparison is only honest if both sides are the same day, so
       // follow the optimiser onto whichever day it planned.
       optimisedDay = d.day || optimisedDay;
+      lastReport = {dispatched: d.dispatched, offered: d.offered};
+
+      // keep the baseline on the same window as the plan it is compared to
+      if (greedyPaths.length || showGreedy){
+        try {
+          await fetchGreedy(Math.max(0, Math.floor(t0 / 60)),
+                            Math.min(1440, Math.ceil(t1 / 60)));
+        } catch (e){ /* the plan stands without a baseline beside it */ }
+      }
+      renderBaseline();
       if (showObserved && optimisedDay && optimisedDay !== observedDay){
         try { await loadObserved(optimisedDay); renderComparison(); }
         catch (e){ /* the plan still stands without the record beside it */ }

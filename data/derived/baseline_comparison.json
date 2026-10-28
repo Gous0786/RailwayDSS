@@ -1,0 +1,1587 @@
+{
+ "day": "2025-08-01",
+ "window": [
+  0.0,
+  1440.0
+ ],
+ "scenarios": {
+  "clean day, nothing withdrawn": {
+   "offered": 112,
+   "greedy": {
+    "dispatched": 99,
+    "seconds": 0.02,
+    "violations": 0,
+    "kpis": {
+     "trains_cleared": 167,
+     "freight_cleared": 99,
+     "horizon_hours": 24.0,
+     "throughput_per_day": 167.0,
+     "freight_per_day": 99.0,
+     "mean_transit_min": 147.26,
+     "mean_freight_transit_min": 178.57,
+     "mean_delay_min": 0.0,
+     "punctuality_pct": 100.0,
+     "detention_min": 3079.927,
+     "detention_pct": 12.524,
+     "utilization_pct": 32.477,
+     "busiest_line": "KUK-VZM:DN",
+     "busiest_line_pct": 126.802
+    },
+    "only_here": []
+   },
+   "cpsat": {
+    "dispatched": 100,
+    "seconds": 122.23,
+    "violations": 0,
+    "kpis": {
+     "trains_cleared": 168,
+     "freight_cleared": 100,
+     "horizon_hours": 24.0,
+     "throughput_per_day": 168.0,
+     "freight_per_day": 100.0,
+     "mean_transit_min": 142.533,
+     "mean_freight_transit_min": 170.315,
+     "mean_delay_min": 0.0,
+     "punctuality_pct": 100.0,
+     "detention_min": 2100.033,
+     "detention_pct": 8.77,
+     "utilization_pct": 32.979,
+     "busiest_line": "KUK-VZM:DN",
+     "busiest_line_pct": 129.014
+    },
+    "only_here": [
+     "HPCVHPKB31072025235552"
+    ],
+    "gaps": [
+     0.0,
+     7.313139765887279,
+     null
+    ]
+   },
+   "paired": {
+    "rakes": 99,
+    "greedy_detention_total": 2495.9,
+    "cpsat_detention_total": 1498.3,
+    "greedy_detention_median": 0.5,
+    "cpsat_detention_median": 0,
+    "greedy_transit_total": 17678.4,
+    "cpsat_transit_total": 16680.9,
+    "cpsat_faster": 42,
+    "cpsat_slower": 9,
+    "same": 48
+   },
+   "rows": [
+    {
+     "id": "ACTRPSPG31072025005201",
+     "hops": 16,
+     "greedy_detention": 44.35000000000002,
+     "cpsat_detention": 0,
+     "greedy_transit": 296.6166666666667,
+     "cpsat_transit": 252.2666666666667
+    },
+    {
+     "id": "BCMTMGPV29072025131358",
+     "hops": 20,
+     "greedy_detention": 23.83333333333337,
+     "cpsat_detention": 17.0,
+     "greedy_transit": 343.5999999999999,
+     "cpsat_transit": 336.76666666666654
+    },
+    {
+     "id": "BCMTSTDV31072025071903",
+     "hops": 20,
+     "greedy_detention": 0,
+     "cpsat_detention": 0,
+     "greedy_transit": 319.76666666666665,
+     "cpsat_transit": 319.76666666666665
+    },
+    {
+     "id": "BCSBHND 29072025130448",
+     "hops": 16,
+     "greedy_detention": 39.75,
+     "cpsat_detention": 209.25,
+     "greedy_transit": 294.25,
+     "cpsat_transit": 463.75
+    },
+    {
+     "id": "BLSNVZP 30072025053415",
+     "hops": 2,
+     "greedy_detention": 0,
+     "cpsat_detention": 0,
+     "greedy_transit": 33.11666666666667,
+     "cpsat_transit": 33.11666666666667
+    },
+    {
+     "id": "BOCBFSTP29072025210908",
+     "hops": 4,
+     "greedy_detention": 2.7397435897436253,
+     "cpsat_detention": 0,
+     "greedy_transit": 70.23974358974363,
+     "cpsat_transit": 67.5
+    },
+    {
+     "id": "BOCBSTDV29072025163338",
+     "hops": 4,
+     "greedy_detention": 0,
+     "cpsat_detention": 0,
+     "greedy_transit": 67.5,
+     "cpsat_transit": 67.5
+    },
+    {
+     "id": "BOCBVSPS30072025094020",
+     "hops": 4,
+     "greedy_detention": 1.75,
+     "cpsat_detention": 0,
+     "greedy_transit": 69.25,
+     "cpsat_transit": 67.5
+    },
+    {
+     "id": "BOCMBSPB29072025172941",
+     "hops": 4,
+     "greedy_detention": 0,
+     "cpsat_detention": 0,
+     "greedy_transit": 67.5,
+     "cpsat_transit": 67.5
+    },
+    {
+     "id": "BSCSSAIT18072025230151",
+     "hops": 4,
+     "greedy_detention": 0,
+     "cpsat_detention": 0,
+     "greedy_transit": 67.5,
+     "cpsat_transit": 67.5
+    },
+    {
+     "id": "BSCSSNF 27072025195649",
+     "hops": 3,
+     "greedy_detention": 0,
+     "cpsat_detention": 0,
+     "greedy_transit": 46.88333333333334,
+     "cpsat_transit": 46.88333333333334
+    },
+    {
+     "id": "CCJSFCON01082025055025",
+     "hops": 20,
+     "greedy_detention": 36.84999999999991,
+     "cpsat_detention": 55.183333333333394,
+     "greedy_transit": 369.8166666666666,
+     "cpsat_transit": 388.1500000000001
+    },
+    {
+     "id": "CHE VZP 31072025210932",
+     "hops": 9,
+     "greedy_detention": 0,
+     "cpsat_detention": 0,
+     "greedy_transit": 152.58333333333334,
+     "cpsat_transit": 152.58333333333334
+    },
+    {
+     "id": "DPMTKZJ 28072025180313",
+     "hops": 4,
+     "greedy_detention": 0.5,
+     "cpsat_detention": 0,
+     "greedy_transit": 78.96666666666664,
+     "cpsat_transit": 78.4666666666667
+    },
+    {
+     "id": "DVL KIS 29072025052014",
+     "hops": 16,
+     "greedy_detention": 37.73333333333332,
+     "cpsat_detention": 21.649999999999977,
+     "greedy_transit": 292.23333333333335,
+     "cpsat_transit": 276.15
+    },
+    {
+     "id": "GCCPCHE 30072025105222",
+     "hops": 8,
+     "greedy_detention": 4.03333333333353,
+     "cpsat_detention": 0,
+     "greedy_transit": 122.11666666666656,
+     "cpsat_transit": 118.08333333333326
+    },
+    {
+     "id": "HPCGHPGN30072025191527",
+     "hops": 4,
+     "greedy_detention": 0,
+     "cpsat_detention": 0,
+     "greedy_transit": 78.46666666666664,
+     "cpsat_transit": 78.46666666666664
+    },
+    {
+     "id": "HPCVBCPL31072025135243",
+     "hops": 17,
+     "greedy_detention": 64.30000000000001,
+     "cpsat_detention": 97.18333333333317,
+     "greedy_transit": 350.65,
+     "cpsat_transit": 383.5333333333334
+    },
+    {
+     "id": "HPCVHLBK31072025071319",
+     "hops": 9,
+     "greedy_detention": 12.650000000000006,
+     "cpsat_detention": 1.0,
+     "greedy_transit": 144.65,
+     "cpsat_transit": 133.0
+    },
+    {
+     "id": "HPCVLBPM01082025063121",
+     "hops": 4,
+     "greedy_detention": 0,
+     "cpsat_detention": 0,
+     "greedy_transit": 78.4666666666667,
+     "cpsat_transit": 78.4666666666667
+    },
+    {
+     "id": "HPCVLBPM31072025122847",
+     "hops": 4,
+     "greedy_detention": 4.139743589743603,
+     "cpsat_detention": 0,
+     "greedy_transit": 82.6064102564103,
+     "cpsat_transit": 78.4666666666667
+    },
+    {
+     "id": "HPCVLBPM31072025210931",
+     "hops": 4,
+     "greedy_detention": 0,
+     "cpsat_detention": 0,
+     "greedy_transit": 78.4666666666667,
+     "cpsat_transit": 78.4666666666667
+    },
+    {
+     "id": "JSLSVZP 30072025231826",
+     "hops": 4,
+     "greedy_detention": 0,
+     "cpsat_detention": 0,
+     "greedy_transit": 67.5,
+     "cpsat_transit": 67.5
+    },
+    {
+     "id": "KDN KAPT29072025065055",
+     "hops": 7,
+     "greedy_detention": 14.98333333333332,
+     "cpsat_detention": 0,
+     "greedy_transit": 114.23333333333332,
+     "cpsat_transit": 99.25
+    },
+    {
+     "id": "KDO MRZA28072025014044",
+     "hops": 20,
+     "greedy_detention": 180.66666666666663,
+     "cpsat_detention": 58.2166666666667,
+     "greedy_transit": 513.6333333333334,
+     "cpsat_transit": 391.1833333333334
+    },
+    {
+     "id": "KMX JSLS31072025193215",
+     "hops": 15,
+     "greedy_detention": 47.41666666666663,
+     "cpsat_detention": 77.26666666666665,
+     "greedy_transit": 279.1833333333333,
+     "cpsat_transit": 309.03333333333336
+    },
+    {
+     "id": "KNGKCTKR31072025072217",
+     "hops": 20,
+     "greedy_detention": 101.56025641025644,
+     "cpsat_detention": 34.683333333333394,
+     "greedy_transit": 434.526923076923,
+     "cpsat_transit": 367.6500000000001
+    },
+    {
+     "id": "KPL TLHR31072025210440",
+     "hops": 15,
+     "greedy_detention": 43.91666666666666,
+     "cpsat_detention": 36.74999999999997,
+     "greedy_transit": 275.68333333333334,
+     "cpsat_transit": 268.51666666666665
+    },
+    {
+     "id": "KSLKDMH 31072025152709",
+     "hops": 20,
+     "greedy_detention": 46.5333333333333,
+     "cpsat_detention": 0.5833333333333712,
+     "greedy_transit": 379.5,
+     "cpsat_transit": 333.55000000000007
+    },
+    {
+     "id": "KSLKHZBN30072025222808",
+     "hops": 17,
+     "greedy_detention": 47.46666666666664,
+     "cpsat_detention": 16.5,
+     "greedy_transit": 333.81666666666666,
+     "cpsat_transit": 302.85
+    },
+    {
+     "id": "KSLKTPSK29072025213547",
+     "hops": 4,
+     "greedy_detention": 0,
+     "cpsat_detention": 0,
+     "greedy_transit": 78.4666666666667,
+     "cpsat_transit": 78.4666666666667
+    },
+    {
+     "id": "KSLKTPSK31072025094152",
+     "hops": 4,
+     "greedy_detention": 0.5,
+     "cpsat_detention": 0,
+     "greedy_transit": 78.9666666666667,
+     "cpsat_transit": 78.4666666666667
+    },
+    {
+     "id": "LOCMVSPS30072025132355",
+     "hops": 4,
+     "greedy_detention": 0,
+     "cpsat_detention": 0,
+     "greedy_transit": 67.5,
+     "cpsat_transit": 67.5
+    },
+    {
+     "id": "MAALVZP 30072025145546",
+     "hops": 4,
+     "greedy_detention": 0,
+     "cpsat_detention": 0,
+     "greedy_transit": 67.5,
+     "cpsat_transit": 67.5
+    },
+    {
+     "id": "MAILMGPV30072025063359",
+     "hops": 4,
+     "greedy_detention": 0,
+     "cpsat_detention": 0,
+     "greedy_transit": 67.5,
+     "cpsat_transit": 67.5
+    },
+    {
+     "id": "MAILMGPV30072025140211",
+     "hops": 4,
+     "greedy_detention": 2.7397435897436253,
+     "cpsat_detention": 0,
+     "greedy_transit": 70.23974358974363,
+     "cpsat_transit": 67.5
+    },
+    {
+     "id": "MAILMGPV31072025004213",
+     "hops": 4,
+     "greedy_detention": 0,
+     "cpsat_detention": 0,
+     "greedy_transit": 67.5,
+     "cpsat_transit": 67.5
+    },
+    {
+     "id": "MAILMGPV31072025103623",
+     "hops": 4,
+     "greedy_detention": 3.506410256410163,
+     "cpsat_detention": 0,
+     "greedy_transit": 71.00641025641016,
+     "cpsat_transit": 67.5
+    },
+    {
+     "id": "MAVBVZP 01082025003834",
+     "hops": 4,
+     "greedy_detention": 0,
+     "cpsat_detention": 0,
+     "greedy_transit": 67.5,
+     "cpsat_transit": 67.5
+    },
+    {
+     "id": "MAVBVZP 30072025011339",
+     "hops": 4,
+     "greedy_detention": 0,
+     "cpsat_detention": 0,
+     "greedy_transit": 67.5,
+     "cpsat_transit": 67.5
+    },
+    {
+     "id": "MAVBVZP 30072025205739",
+     "hops": 4,
+     "greedy_detention": 3.506410256410277,
+     "cpsat_detention": 0,
+     "greedy_transit": 71.00641025641028,
+     "cpsat_transit": 67.5
+    },
+    {
+     "id": "MBMBTISR30072025234637",
+     "hops": 20,
+     "greedy_detention": 72.47307692307696,
+     "cpsat_detention": 20.48333333333335,
+     "greedy_transit": 392.2397435897436,
+     "cpsat_transit": 340.2500000000001
+    },
+    {
+     "id": "MBMBTISR31072025134831",
+     "hops": 20,
+     "greedy_detention": 3.2397435897432842,
+     "cpsat_detention": 0,
+     "greedy_transit": 323.00641025641016,
+     "cpsat_transit": 319.76666666666665
+    },
+    {
+     "id": "MCGBKPL 29072025174950",
+     "hops": 3,
+     "greedy_detention": 1.5064102564102768,
+     "cpsat_detention": 0,
+     "greedy_transit": 53.75641025641028,
+     "cpsat_transit": 52.25
+    },
+    {
+     "id": "MCGBSTDV30072025021209",
+     "hops": 4,
+     "greedy_detention": 0,
+     "cpsat_detention": 0,
+     "greedy_transit": 67.5,
+     "cpsat_transit": 67.5
+    },
+    {
+     "id": "MGPVBPSL01082025065101",
+     "hops": 4,
+     "greedy_detention": 0,
+     "cpsat_detention": 0,
+     "greedy_transit": 78.4666666666667,
+     "cpsat_transit": 78.4666666666667
+    },
+    {
+     "id": "MGPVBPSL29072025224640",
+     "hops": 4,
+     "greedy_detention": 0,
+     "cpsat_detention": 0,
+     "greedy_transit": 78.4666666666667,
+     "cpsat_transit": 78.4666666666667
+    },
+    {
+     "id": "MGPVBPSL31072025175229",
+     "hops": 4,
+     "greedy_detention": 0,
+     "cpsat_detention": 0,
+     "greedy_transit": 78.46666666666664,
+     "cpsat_transit": 78.46666666666664
+    },
+    {
+     "id": "MGPVBSPC01082025131133",
+     "hops": 4,
+     "greedy_detention": 0,
+     "cpsat_detention": 0,
+     "greedy_transit": 78.4666666666667,
+     "cpsat_transit": 78.46666666666647
+    },
+    {
+     "id": "MGPVBSPC31072025210214",
+     "hops": 4,
+     "greedy_detention": 0,
+     "cpsat_detention": 0,
+     "greedy_transit": 78.4666666666667,
+     "cpsat_transit": 78.4666666666667
+    },
+    {
+     "id": "MGPVJSLK01082025033630",
+     "hops": 4,
+     "greedy_detention": 0,
+     "cpsat_detention": 0,
+     "greedy_transit": 78.4666666666667,
+     "cpsat_transit": 78.4666666666667
+    },
+    {
+     "id": "MGPVMVAA01082025020711",
+     "hops": 4,
+     "greedy_detention": 0,
+     "cpsat_detention": 0,
+     "greedy_transit": 78.4666666666667,
+     "cpsat_transit": 78.4666666666667
+    },
+    {
+     "id": "MGPVMVAA01082025131517",
+     "hops": 4,
+     "greedy_detention": 3.1499999999998636,
+     "cpsat_detention": 0,
+     "greedy_transit": 81.61666666666679,
+     "cpsat_transit": 78.4666666666667
+    },
+    {
+     "id": "MGPVMVAA30072025091835",
+     "hops": 4,
+     "greedy_detention": 1.2730769230769283,
+     "cpsat_detention": 0,
+     "greedy_transit": 79.73974358974363,
+     "cpsat_transit": 78.4666666666667
+    },
+    {
+     "id": "MGPVNMAG31072025174804",
+     "hops": 1,
+     "greedy_detention": 0,
+     "cpsat_detention": 0,
+     "greedy_transit": 31.85,
+     "cpsat_transit": 31.85
+    },
+    {
+     "id": "MGPVPMSB01082025065140",
+     "hops": 4,
+     "greedy_detention": 0,
+     "cpsat_detention": 0,
+     "greedy_transit": 78.4666666666667,
+     "cpsat_transit": 78.4666666666667
+    },
+    {
+     "id": "MLPMKAPT30072025072852",
+     "hops": 20,
+     "greedy_detention": 103.25,
+     "cpsat_detention": 196.2666666666667,
+     "greedy_transit": 436.2166666666667,
+     "cpsat_transit": 529.2333333333333
+    },
+    {
+     "id": "MLPMPSTA30072025010005",
+     "hops": 20,
+     "greedy_detention": 108.28333333333336,
+     "cpsat_detention": 29.0,
+     "greedy_transit": 441.25,
+     "cpsat_transit": 361.9666666666667
+    },
+    {
+     "id": "MMHRJNP 30072025232839",
+     "hops": 20,
+     "greedy_detention": 42.73333333333335,
+     "cpsat_detention": 67.81666666666672,
+     "greedy_transit": 375.7,
+     "cpsat_transit": 400.78333333333336
+    },
+    {
+     "id": "MSCMSKND30072025085334",
+     "hops": 11,
+     "greedy_detention": 35.28333333333333,
+     "cpsat_detention": 0,
+     "greedy_transit": 204.76666666666665,
+     "cpsat_transit": 169.48333333333335
+    },
+    {
+     "id": "MUATKKPS31072025174808",
+     "hops": 4,
+     "greedy_detention": 0,
+     "cpsat_detention": 0,
+     "greedy_transit": 67.5,
+     "cpsat_transit": 67.5
+    },
+    {
+     "id": "MVAAPGFV31072025172404",
+     "hops": 4,
+     "greedy_detention": 0,
+     "cpsat_detention": 0,
+     "greedy_transit": 67.5,
+     "cpsat_transit": 67.5
+    },
+    {
+     "id": "MVAAWAT 31072025075256",
+     "hops": 4,
+     "greedy_detention": 0,
+     "cpsat_detention": 0,
+     "greedy_transit": 67.5,
+     "cpsat_transit": 67.5
+    },
+    {
+     "id": "NTMKBSPB29072025230015",
+     "hops": 4,
+     "greedy_detention": 0,
+     "cpsat_detention": 0,
+     "greedy_transit": 67.50000000000006,
+     "cpsat_transit": 67.5
+    },
+    {
+     "id": "OEC TLHR01082025133555",
+     "hops": 20,
+     "greedy_detention": 89.4666666666667,
+     "cpsat_detention": 44.40000000000009,
+     "greedy_transit": 422.4333333333333,
+     "cpsat_transit": 377.3666666666668
+    },
+    {
+     "id": "OEC TLHR31072025214324",
+     "hops": 20,
+     "greedy_detention": 102.01666666666677,
+     "cpsat_detention": 73.0,
+     "greedy_transit": 434.98333333333335,
+     "cpsat_transit": 405.9666666666667
+    },
+    {
+     "id": "PGFCCH  31072025000820",
+     "hops": 4,
+     "greedy_detention": 0,
+     "cpsat_detention": 0,
+     "greedy_transit": 78.46666666666667,
+     "cpsat_transit": 78.46666666666667
+    },
+    {
+     "id": "PLINBGDS29072025214106",
+     "hops": 20,
+     "greedy_detention": 47.48333333333335,
+     "cpsat_detention": 110.64999999999998,
+     "greedy_transit": 380.45000000000005,
+     "cpsat_transit": 443.6166666666667
+    },
+    {
+     "id": "PRPLBRMT31072025003914",
+     "hops": 20,
+     "greedy_detention": 147.18974358974367,
+     "cpsat_detention": 17.0,
+     "greedy_transit": 466.9564102564103,
+     "cpsat_transit": 336.76666666666677
+    },
+    {
+     "id": "PSPGVZP 31072025182624",
+     "hops": 16,
+     "greedy_detention": 42.14999999999998,
+     "cpsat_detention": 20.0,
+     "greedy_transit": 296.65,
+     "cpsat_transit": 274.5
+    },
+    {
+     "id": "RDPSKNGK30072025155817",
+     "hops": 4,
+     "greedy_detention": 0,
+     "cpsat_detention": 0,
+     "greedy_transit": 67.5,
+     "cpsat_transit": 67.5
+    },
+    {
+     "id": "RVD MVAA31072025122604",
+     "hops": 4,
+     "greedy_detention": 0,
+     "cpsat_detention": 0,
+     "greedy_transit": 78.4666666666667,
+     "cpsat_transit": 78.4666666666667
+    },
+    {
+     "id": "RVD MVAA31072025224855",
+     "hops": 4,
+     "greedy_detention": 0,
+     "cpsat_detention": 0,
+     "greedy_transit": 78.4666666666667,
+     "cpsat_transit": 78.4666666666667
+    },
+    {
+     "id": "RYD TLHR01082025085247",
+     "hops": 20,
+     "greedy_detention": 56.68333333333328,
+     "cpsat_detention": 0.5833333333333712,
+     "greedy_transit": 389.6500000000001,
+     "cpsat_transit": 333.54999999999995
+    },
+    {
+     "id": "SBCTSTDV31072025005054",
+     "hops": 12,
+     "greedy_detention": 11.35000000000008,
+     "cpsat_detention": 0,
+     "greedy_transit": 213.03333333333336,
+     "cpsat_transit": 201.6833333333334
+    },
+    {
+     "id": "SJCTSTDV30072025145743",
+     "hops": 20,
+     "greedy_detention": 114.13333333333338,
+     "cpsat_detention": 0,
+     "greedy_transit": 433.9,
+     "cpsat_transit": 319.7666666666667
+    },
+    {
+     "id": "SJWTSTDV30072025205309",
+     "hops": 12,
+     "greedy_detention": 19.9,
+     "cpsat_detention": 0,
+     "greedy_transit": 221.58333333333334,
+     "cpsat_transit": 201.68333333333328
+    },
+    {
+     "id": "SKNDIMFT31072025122201",
+     "hops": 16,
+     "greedy_detention": 114.5333333333333,
+     "cpsat_detention": 113.48333333333335,
+     "greedy_transit": 366.79999999999995,
+     "cpsat_transit": 365.75
+    },
+    {
+     "id": "SSMTTPAK30072025125544",
+     "hops": 18,
+     "greedy_detention": 224.18333333333334,
+     "cpsat_detention": 0,
+     "greedy_transit": 518.3,
+     "cpsat_transit": 294.1166666666667
+    },
+    {
+     "id": "STDVTLHR01082025064106",
+     "hops": 20,
+     "greedy_detention": 23.000000000000114,
+     "cpsat_detention": 23.13333333333344,
+     "greedy_transit": 355.9666666666668,
+     "cpsat_transit": 356.1
+    },
+    {
+     "id": "TLD KNGK31072025030659",
+     "hops": 4,
+     "greedy_detention": 0,
+     "cpsat_detention": 0,
+     "greedy_transit": 67.5,
+     "cpsat_transit": 67.5
+    },
+    {
+     "id": "TPSKKSLK30072025051254",
+     "hops": 4,
+     "greedy_detention": 0,
+     "cpsat_detention": 0,
+     "greedy_transit": 67.5,
+     "cpsat_transit": 67.5
+    },
+    {
+     "id": "TSLJTISR31072025191932",
+     "hops": 20,
+     "greedy_detention": 27.316666666666606,
+     "cpsat_detention": 24.433333333333394,
+     "greedy_transit": 347.08333333333326,
+     "cpsat_transit": 344.19999999999993
+    },
+    {
+     "id": "UCLHUCSM30072025175224",
+     "hops": 16,
+     "greedy_detention": 49.39999999999998,
+     "cpsat_detention": 0,
+     "greedy_transit": 303.9,
+     "cpsat_transit": 254.5
+    },
+    {
+     "id": "VGSDMVAA01082025055206",
+     "hops": 4,
+     "greedy_detention": 0,
+     "cpsat_detention": 0,
+     "greedy_transit": 78.4666666666667,
+     "cpsat_transit": 78.4666666666667
+    },
+    {
+     "id": "VGSDMVAA01082025181429",
+     "hops": 4,
+     "greedy_detention": 0,
+     "cpsat_detention": 0,
+     "greedy_transit": 78.4666666666667,
+     "cpsat_transit": 78.4666666666667
+    },
+    {
+     "id": "VGSDMVAA30072025094248",
+     "hops": 4,
+     "greedy_detention": 2.506410256410277,
+     "cpsat_detention": 0,
+     "greedy_transit": 80.97307692307697,
+     "cpsat_transit": 78.4666666666667
+    },
+    {
+     "id": "VIPNMAVB31072025171235",
+     "hops": 4,
+     "greedy_detention": 0,
+     "cpsat_detention": 0,
+     "greedy_transit": 78.4666666666667,
+     "cpsat_transit": 78.4666666666667
+    },
+    {
+     "id": "VZP BPSL30072025132558",
+     "hops": 4,
+     "greedy_detention": 4.139743589743603,
+     "cpsat_detention": 0,
+     "greedy_transit": 82.6064102564103,
+     "cpsat_transit": 78.4666666666667
+    },
+    {
+     "id": "VZP BPSL31072025043112",
+     "hops": 4,
+     "greedy_detention": 0,
+     "cpsat_detention": 0,
+     "greedy_transit": 78.4666666666667,
+     "cpsat_transit": 78.4666666666667
+    },
+    {
+     "id": "VZP BSPC31072025230742",
+     "hops": 4,
+     "greedy_detention": 0,
+     "cpsat_detention": 0,
+     "greedy_transit": 78.4666666666667,
+     "cpsat_transit": 78.4666666666667
+    },
+    {
+     "id": "VZP IDBR31072025052533",
+     "hops": 4,
+     "greedy_detention": 0,
+     "cpsat_detention": 0,
+     "greedy_transit": 52.599999999999994,
+     "cpsat_transit": 52.599999999999994
+    },
+    {
+     "id": "VZP JNP 30072025044623",
+     "hops": 18,
+     "greedy_detention": 102.09999999999968,
+     "cpsat_detention": 32.11666666666656,
+     "greedy_transit": 409.41666666666663,
+     "cpsat_transit": 339.4333333333334
+    },
+    {
+     "id": "VZP MAVB30072025153512",
+     "hops": 4,
+     "greedy_detention": 0,
+     "cpsat_detention": 0,
+     "greedy_transit": 78.46666666666664,
+     "cpsat_transit": 78.46666666666664
+    },
+    {
+     "id": "VZP MBMB29072025211419",
+     "hops": 15,
+     "greedy_detention": 117.91666666666674,
+     "cpsat_detention": 35.35000000000002,
+     "greedy_transit": 349.6833333333333,
+     "cpsat_transit": 267.1166666666667
+    },
+    {
+     "id": "VZP MMIS30072025211832",
+     "hops": 20,
+     "greedy_detention": 63.83974358974365,
+     "cpsat_detention": 65.35000000000002,
+     "greedy_transit": 396.80641025641023,
+     "cpsat_transit": 398.3166666666667
+    },
+    {
+     "id": "VZP SCPM29072025123216",
+     "hops": 2,
+     "greedy_detention": 0,
+     "cpsat_detention": 0,
+     "greedy_transit": 25.65,
+     "cpsat_transit": 25.65
+    },
+    {
+     "id": "VZP TPSK31072025143328",
+     "hops": 4,
+     "greedy_detention": 0,
+     "cpsat_detention": 0,
+     "greedy_transit": 78.46666666666667,
+     "cpsat_transit": 78.46666666666667
+    },
+    {
+     "id": "VZP TPSK31072025210656",
+     "hops": 4,
+     "greedy_detention": 0,
+     "cpsat_detention": 0,
+     "greedy_transit": 78.4666666666667,
+     "cpsat_transit": 78.4666666666667
+    }
+   ]
+  },
+  "under closure: VZM-NML:DN": {
+   "offered": 112,
+   "greedy": {
+    "dispatched": 84,
+    "seconds": 0.11,
+    "violations": 0,
+    "kpis": {
+     "trains_cleared": 152,
+     "freight_cleared": 84,
+     "horizon_hours": 24.0,
+     "throughput_per_day": 152.0,
+     "freight_per_day": 84.0,
+     "mean_transit_min": 133.606,
+     "mean_freight_transit_min": 159.455,
+     "mean_delay_min": 0.0,
+     "punctuality_pct": 100.0,
+     "detention_min": 3371.437,
+     "detention_pct": 16.601,
+     "utilization_pct": 25.569,
+     "busiest_line": "KUK-VZM:DN",
+     "busiest_line_pct": 106.896
+    },
+    "only_here": [
+     "KNGKCTKR31072025072217",
+     "MBMBTISR31072025134831",
+     "MLPMPSTA30072025010005",
+     "OEC TLHR31072025214324"
+    ]
+   },
+   "cpsat": {
+    "dispatched": 87,
+    "seconds": 124.85,
+    "violations": 0,
+    "kpis": {
+     "trains_cleared": 155,
+     "freight_cleared": 87,
+     "horizon_hours": 24.0,
+     "throughput_per_day": 155.0,
+     "freight_per_day": 87.0,
+     "mean_transit_min": 140.814,
+     "mean_freight_transit_min": 171.405,
+     "mean_delay_min": 0.0,
+     "punctuality_pct": 100.0,
+     "detention_min": 4034.283,
+     "detention_pct": 18.484,
+     "utilization_pct": 26.86,
+     "busiest_line": "KUK-VZM:DN",
+     "busiest_line_pct": 111.319
+    },
+    "only_here": [
+     "BCSBHND 29072025130448",
+     "CCJSFCON01082025055025",
+     "HPCVHPKB31072025235552",
+     "KDO MRZA28072025014044",
+     "KSLKDMH 31072025152709",
+     "PSPGVZP 31072025182624",
+     "RYD TLHR01082025085247"
+    ],
+    "gaps": [
+     8.045977011494253,
+     null
+    ]
+   },
+   "paired": {
+    "rakes": 80,
+    "greedy_detention_total": 1868.5,
+    "cpsat_detention_total": 2687.1,
+    "greedy_detention_median": 0.0,
+    "cpsat_detention_median": 0.0,
+    "greedy_transit_total": 11156.6,
+    "cpsat_transit_total": 11975.2,
+    "cpsat_faster": 23,
+    "cpsat_slower": 10,
+    "same": 47
+   },
+   "rows": [
+    {
+     "id": "ACTRPSPG31072025005201",
+     "hops": 16,
+     "greedy_detention": 404.5333333333333,
+     "cpsat_detention": 295.4333333333334,
+     "greedy_transit": 656.8,
+     "cpsat_transit": 547.7
+    },
+    {
+     "id": "BCMTMGPV29072025131358",
+     "hops": 20,
+     "greedy_detention": 60.2397435897434,
+     "cpsat_detention": 206.83333333333337,
+     "greedy_transit": 380.00641025641016,
+     "cpsat_transit": 526.5999999999999
+    },
+    {
+     "id": "BLSNVZP 30072025053415",
+     "hops": 2,
+     "greedy_detention": 0,
+     "cpsat_detention": 0,
+     "greedy_transit": 33.11666666666667,
+     "cpsat_transit": 33.11666666666667
+    },
+    {
+     "id": "BOCBFSTP29072025210908",
+     "hops": 4,
+     "greedy_detention": 2.7397435897436253,
+     "cpsat_detention": 0,
+     "greedy_transit": 70.23974358974363,
+     "cpsat_transit": 67.5
+    },
+    {
+     "id": "BOCBSTDV29072025163338",
+     "hops": 4,
+     "greedy_detention": 0,
+     "cpsat_detention": 0,
+     "greedy_transit": 67.5,
+     "cpsat_transit": 67.5
+    },
+    {
+     "id": "BOCBVSPS30072025094020",
+     "hops": 4,
+     "greedy_detention": 1.75,
+     "cpsat_detention": 0,
+     "greedy_transit": 69.25,
+     "cpsat_transit": 67.5
+    },
+    {
+     "id": "BOCMBSPB29072025172941",
+     "hops": 4,
+     "greedy_detention": 0,
+     "cpsat_detention": 0,
+     "greedy_transit": 67.5,
+     "cpsat_transit": 67.5
+    },
+    {
+     "id": "BSCSSAIT18072025230151",
+     "hops": 4,
+     "greedy_detention": 0,
+     "cpsat_detention": 0,
+     "greedy_transit": 67.5,
+     "cpsat_transit": 67.5
+    },
+    {
+     "id": "BSCSSNF 27072025195649",
+     "hops": 3,
+     "greedy_detention": 0,
+     "cpsat_detention": 0,
+     "greedy_transit": 46.88333333333334,
+     "cpsat_transit": 46.88333333333334
+    },
+    {
+     "id": "CHE VZP 31072025210932",
+     "hops": 9,
+     "greedy_detention": 48.71666666666667,
+     "cpsat_detention": 3.4499999999999886,
+     "greedy_transit": 201.3,
+     "cpsat_transit": 156.03333333333333
+    },
+    {
+     "id": "DPMTKZJ 28072025180313",
+     "hops": 4,
+     "greedy_detention": 0.5,
+     "cpsat_detention": 0,
+     "greedy_transit": 78.96666666666664,
+     "cpsat_transit": 78.4666666666667
+    },
+    {
+     "id": "DVL KIS 29072025052014",
+     "hops": 16,
+     "greedy_detention": 42.14999999999998,
+     "cpsat_detention": 249.48333333333332,
+     "greedy_transit": 296.65,
+     "cpsat_transit": 503.98333333333335
+    },
+    {
+     "id": "GCCPCHE 30072025105222",
+     "hops": 8,
+     "greedy_detention": 4.03333333333353,
+     "cpsat_detention": 0,
+     "greedy_transit": 122.11666666666656,
+     "cpsat_transit": 118.08333333333326
+    },
+    {
+     "id": "HPCGHPGN30072025191527",
+     "hops": 4,
+     "greedy_detention": 0,
+     "cpsat_detention": 0,
+     "greedy_transit": 78.46666666666664,
+     "cpsat_transit": 78.46666666666664
+    },
+    {
+     "id": "HPCVBCPL31072025135243",
+     "hops": 17,
+     "greedy_detention": 64.30000000000001,
+     "cpsat_detention": 64.29999999999998,
+     "greedy_transit": 350.65,
+     "cpsat_transit": 350.65
+    },
+    {
+     "id": "HPCVHLBK31072025071319",
+     "hops": 9,
+     "greedy_detention": 12.650000000000006,
+     "cpsat_detention": 89.16666666666667,
+     "greedy_transit": 144.65,
+     "cpsat_transit": 221.16666666666666
+    },
+    {
+     "id": "HPCVLBPM01082025063121",
+     "hops": 4,
+     "greedy_detention": 0,
+     "cpsat_detention": 0,
+     "greedy_transit": 78.4666666666667,
+     "cpsat_transit": 78.4666666666667
+    },
+    {
+     "id": "HPCVLBPM31072025122847",
+     "hops": 4,
+     "greedy_detention": 4.139743589743603,
+     "cpsat_detention": 0,
+     "greedy_transit": 82.6064102564103,
+     "cpsat_transit": 78.4666666666667
+    },
+    {
+     "id": "HPCVLBPM31072025210931",
+     "hops": 4,
+     "greedy_detention": 0,
+     "cpsat_detention": 0,
+     "greedy_transit": 78.4666666666667,
+     "cpsat_transit": 78.4666666666667
+    },
+    {
+     "id": "JSLSVZP 30072025231826",
+     "hops": 4,
+     "greedy_detention": 0,
+     "cpsat_detention": 0,
+     "greedy_transit": 67.5,
+     "cpsat_transit": 67.5
+    },
+    {
+     "id": "KDN KAPT29072025065055",
+     "hops": 7,
+     "greedy_detention": 14.98333333333332,
+     "cpsat_detention": 0,
+     "greedy_transit": 114.23333333333332,
+     "cpsat_transit": 99.24999999999997
+    },
+    {
+     "id": "KMX JSLS31072025193215",
+     "hops": 15,
+     "greedy_detention": 19.600000000000023,
+     "cpsat_detention": 0,
+     "greedy_transit": 251.36666666666667,
+     "cpsat_transit": 231.76666666666665
+    },
+    {
+     "id": "KPL TLHR31072025210440",
+     "hops": 15,
+     "greedy_detention": 43.91666666666666,
+     "cpsat_detention": 116.5333333333333,
+     "greedy_transit": 275.68333333333334,
+     "cpsat_transit": 348.29999999999995
+    },
+    {
+     "id": "KSLKHZBN30072025222808",
+     "hops": 17,
+     "greedy_detention": 46.25,
+     "cpsat_detention": 415.50000000000006,
+     "greedy_transit": 332.6,
+     "cpsat_transit": 701.85
+    },
+    {
+     "id": "KSLKTPSK29072025213547",
+     "hops": 4,
+     "greedy_detention": 3.8833333333333258,
+     "cpsat_detention": 0,
+     "greedy_transit": 82.35000000000002,
+     "cpsat_transit": 78.4666666666667
+    },
+    {
+     "id": "KSLKTPSK31072025094152",
+     "hops": 4,
+     "greedy_detention": 0.5,
+     "cpsat_detention": 0,
+     "greedy_transit": 78.9666666666667,
+     "cpsat_transit": 78.4666666666667
+    },
+    {
+     "id": "LOCMVSPS30072025132355",
+     "hops": 4,
+     "greedy_detention": 0,
+     "cpsat_detention": 0,
+     "greedy_transit": 67.5,
+     "cpsat_transit": 67.5
+    },
+    {
+     "id": "MAALVZP 30072025145546",
+     "hops": 4,
+     "greedy_detention": 0,
+     "cpsat_detention": 0,
+     "greedy_transit": 67.5,
+     "cpsat_transit": 67.5
+    },
+    {
+     "id": "MAILMGPV30072025063359",
+     "hops": 4,
+     "greedy_detention": 0,
+     "cpsat_detention": 0,
+     "greedy_transit": 67.5,
+     "cpsat_transit": 67.5
+    },
+    {
+     "id": "MAILMGPV30072025140211",
+     "hops": 4,
+     "greedy_detention": 2.7397435897436253,
+     "cpsat_detention": 0,
+     "greedy_transit": 70.23974358974363,
+     "cpsat_transit": 67.5
+    },
+    {
+     "id": "MAILMGPV31072025004213",
+     "hops": 4,
+     "greedy_detention": 0,
+     "cpsat_detention": 0,
+     "greedy_transit": 67.5,
+     "cpsat_transit": 67.5
+    },
+    {
+     "id": "MAILMGPV31072025103623",
+     "hops": 4,
+     "greedy_detention": 3.506410256410163,
+     "cpsat_detention": 0,
+     "greedy_transit": 71.00641025641016,
+     "cpsat_transit": 67.5
+    },
+    {
+     "id": "MAVBVZP 01082025003834",
+     "hops": 4,
+     "greedy_detention": 0,
+     "cpsat_detention": 0,
+     "greedy_transit": 67.5,
+     "cpsat_transit": 67.5
+    },
+    {
+     "id": "MAVBVZP 30072025011339",
+     "hops": 4,
+     "greedy_detention": 0,
+     "cpsat_detention": 0,
+     "greedy_transit": 67.5,
+     "cpsat_transit": 67.5
+    },
+    {
+     "id": "MAVBVZP 30072025205739",
+     "hops": 4,
+     "greedy_detention": 3.506410256410277,
+     "cpsat_detention": 0,
+     "greedy_transit": 71.00641025641028,
+     "cpsat_transit": 67.5
+    },
+    {
+     "id": "MBMBTISR30072025234637",
+     "hops": 20,
+     "greedy_detention": 72.47307692307696,
+     "cpsat_detention": 0,
+     "greedy_transit": 392.2397435897436,
+     "cpsat_transit": 319.76666666666677
+    },
+    {
+     "id": "MCGBKPL 29072025174950",
+     "hops": 3,
+     "greedy_detention": 1.5064102564102768,
+     "cpsat_detention": 0,
+     "greedy_transit": 53.75641025641028,
+     "cpsat_transit": 52.25
+    },
+    {
+     "id": "MCGBSTDV30072025021209",
+     "hops": 4,
+     "greedy_detention": 0,
+     "cpsat_detention": 0,
+     "greedy_transit": 67.5,
+     "cpsat_transit": 67.5
+    },
+    {
+     "id": "MGPVBPSL01082025065101",
+     "hops": 4,
+     "greedy_detention": 0,
+     "cpsat_detention": 0,
+     "greedy_transit": 78.4666666666667,
+     "cpsat_transit": 78.4666666666667
+    },
+    {
+     "id": "MGPVBPSL29072025224640",
+     "hops": 4,
+     "greedy_detention": 0,
+     "cpsat_detention": 0,
+     "greedy_transit": 78.4666666666667,
+     "cpsat_transit": 78.4666666666667
+    },
+    {
+     "id": "MGPVBPSL31072025175229",
+     "hops": 4,
+     "greedy_detention": 0,
+     "cpsat_detention": 0,
+     "greedy_transit": 78.46666666666664,
+     "cpsat_transit": 78.46666666666664
+    },
+    {
+     "id": "MGPVBSPC01082025131133",
+     "hops": 4,
+     "greedy_detention": 0,
+     "cpsat_detention": 0,
+     "greedy_transit": 78.4666666666667,
+     "cpsat_transit": 78.46666666666647
+    },
+    {
+     "id": "MGPVBSPC31072025210214",
+     "hops": 4,
+     "greedy_detention": 0,
+     "cpsat_detention": 0,
+     "greedy_transit": 78.4666666666667,
+     "cpsat_transit": 78.4666666666667
+    },
+    {
+     "id": "MGPVJSLK01082025033630",
+     "hops": 4,
+     "greedy_detention": 0,
+     "cpsat_detention": 0,
+     "greedy_transit": 78.4666666666667,
+     "cpsat_transit": 78.4666666666667
+    },
+    {
+     "id": "MGPVMVAA01082025020711",
+     "hops": 4,
+     "greedy_detention": 0,
+     "cpsat_detention": 0,
+     "greedy_transit": 78.4666666666667,
+     "cpsat_transit": 78.4666666666667
+    },
+    {
+     "id": "MGPVMVAA01082025131517",
+     "hops": 4,
+     "greedy_detention": 3.1499999999998636,
+     "cpsat_detention": 0,
+     "greedy_transit": 81.61666666666679,
+     "cpsat_transit": 78.4666666666667
+    },
+    {
+     "id": "MGPVMVAA30072025091835",
+     "hops": 4,
+     "greedy_detention": 1.2730769230769283,
+     "cpsat_detention": 0,
+     "greedy_transit": 79.73974358974363,
+     "cpsat_transit": 78.4666666666667
+    },
+    {
+     "id": "MGPVNMAG31072025174804",
+     "hops": 1,
+     "greedy_detention": 0,
+     "cpsat_detention": 0,
+     "greedy_transit": 31.85,
+     "cpsat_transit": 31.85
+    },
+    {
+     "id": "MGPVPMSB01082025065140",
+     "hops": 4,
+     "greedy_detention": 0,
+     "cpsat_detention": 0,
+     "greedy_transit": 78.4666666666667,
+     "cpsat_transit": 78.4666666666667
+    },
+    {
+     "id": "MLPMKAPT30072025072852",
+     "hops": 20,
+     "greedy_detention": 68.88333333333333,
+     "cpsat_detention": 160.76666666666665,
+     "greedy_transit": 401.85,
+     "cpsat_transit": 493.73333333333335
+    },
+    {
+     "id": "MMHRJNP 30072025232839",
+     "hops": 20,
+     "greedy_detention": 110.91666666666674,
+     "cpsat_detention": 182.08333333333337,
+     "greedy_transit": 443.88333333333344,
+     "cpsat_transit": 515.05
+    },
+    {
+     "id": "MSCMSKND30072025085334",
+     "hops": 11,
+     "greedy_detention": 35.28333333333333,
+     "cpsat_detention": 0,
+     "greedy_transit": 204.76666666666665,
+     "cpsat_transit": 169.48333333333335
+    },
+    {
+     "id": "MUATKKPS31072025174808",
+     "hops": 4,
+     "greedy_detention": 0,
+     "cpsat_detention": 0,
+     "greedy_transit": 67.5,
+     "cpsat_transit": 67.5
+    },
+    {
+     "id": "MVAAPGFV31072025172404",
+     "hops": 4,
+     "greedy_detention": 0,
+     "cpsat_detention": 0,
+     "greedy_transit": 67.5,
+     "cpsat_transit": 67.5
+    },
+    {
+     "id": "MVAAWAT 31072025075256",
+     "hops": 4,
+     "greedy_detention": 0,
+     "cpsat_detention": 0,
+     "greedy_transit": 67.5,
+     "cpsat_transit": 67.5
+    },
+    {
+     "id": "NTMKBSPB29072025230015",
+     "hops": 4,
+     "greedy_detention": 0,
+     "cpsat_detention": 0,
+     "greedy_transit": 67.50000000000006,
+     "cpsat_transit": 67.5
+    },
+    {
+     "id": "PGFCCH  31072025000820",
+     "hops": 4,
+     "greedy_detention": 0,
+     "cpsat_detention": 0,
+     "greedy_transit": 78.46666666666667,
+     "cpsat_transit": 78.46666666666667
+    },
+    {
+     "id": "PRPLBRMT31072025003914",
+     "hops": 20,
+     "greedy_detention": 147.18974358974367,
+     "cpsat_detention": 0,
+     "greedy_transit": 466.9564102564103,
+     "cpsat_transit": 319.76666666666665
+    },
+    {
+     "id": "RDPSKNGK30072025155817",
+     "hops": 4,
+     "greedy_detention": 0,
+     "cpsat_detention": 0,
+     "greedy_transit": 67.5,
+     "cpsat_transit": 67.5
+    },
+    {
+     "id": "RVD MVAA31072025122604",
+     "hops": 4,
+     "greedy_detention": 0,
+     "cpsat_detention": 0,
+     "greedy_transit": 78.4666666666667,
+     "cpsat_transit": 78.4666666666667
+    },
+    {
+     "id": "RVD MVAA31072025224855",
+     "hops": 4,
+     "greedy_detention": 0,
+     "cpsat_detention": 0,
+     "greedy_transit": 78.4666666666667,
+     "cpsat_transit": 78.4666666666667
+    },
+    {
+     "id": "SJCTSTDV30072025145743",
+     "hops": 20,
+     "greedy_detention": 135.53333333333336,
+     "cpsat_detention": 71.04999999999995,
+     "greedy_transit": 455.29999999999995,
+     "cpsat_transit": 390.8166666666666
+    },
+    {
+     "id": "SJWTSTDV30072025205309",
+     "hops": 12,
+     "greedy_detention": 23.41666666666668,
+     "cpsat_detention": 82.48333333333335,
+     "greedy_transit": 225.1,
+     "cpsat_transit": 284.1666666666667
+    },
+    {
+     "id": "SKNDIMFT31072025122201",
+     "hops": 16,
+     "greedy_detention": 135.5333333333333,
+     "cpsat_detention": 135.5333333333333,
+     "greedy_transit": 387.79999999999995,
+     "cpsat_transit": 387.79999999999995
+    },
+    {
+     "id": "SSMTTPAK30072025125544",
+     "hops": 18,
+     "greedy_detention": 224.18333333333334,
+     "cpsat_detention": 226.05,
+     "greedy_transit": 518.3,
+     "cpsat_transit": 520.1666666666666
+    },
+    {
+     "id": "TLD KNGK31072025030659",
+     "hops": 4,
+     "greedy_detention": 0,
+     "cpsat_detention": 0,
+     "greedy_transit": 67.5,
+     "cpsat_transit": 67.5
+    },
+    {
+     "id": "TPSKKSLK30072025051254",
+     "hops": 4,
+     "greedy_detention": 0,
+     "cpsat_detention": 0,
+     "greedy_transit": 67.5,
+     "cpsat_transit": 67.5
+    },
+    {
+     "id": "VGSDMVAA01082025055206",
+     "hops": 4,
+     "greedy_detention": 0,
+     "cpsat_detention": 0,
+     "greedy_transit": 78.4666666666667,
+     "cpsat_transit": 78.4666666666667
+    },
+    {
+     "id": "VGSDMVAA01082025181429",
+     "hops": 4,
+     "greedy_detention": 0,
+     "cpsat_detention": 0,
+     "greedy_transit": 78.4666666666667,
+     "cpsat_transit": 78.4666666666667
+    },
+    {
+     "id": "VGSDMVAA30072025094248",
+     "hops": 4,
+     "greedy_detention": 2.506410256410277,
+     "cpsat_detention": 0,
+     "greedy_transit": 80.97307692307697,
+     "cpsat_transit": 78.4666666666667
+    },
+    {
+     "id": "VIPNMAVB31072025171235",
+     "hops": 4,
+     "greedy_detention": 0,
+     "cpsat_detention": 0,
+     "greedy_transit": 78.4666666666667,
+     "cpsat_transit": 78.4666666666667
+    },
+    {
+     "id": "VZP BPSL30072025132558",
+     "hops": 4,
+     "greedy_detention": 4.139743589743603,
+     "cpsat_detention": 0,
+     "greedy_transit": 82.6064102564103,
+     "cpsat_transit": 78.4666666666667
+    },
+    {
+     "id": "VZP BPSL31072025043112",
+     "hops": 4,
+     "greedy_detention": 0,
+     "cpsat_detention": 0,
+     "greedy_transit": 78.4666666666667,
+     "cpsat_transit": 78.4666666666667
+    },
+    {
+     "id": "VZP BSPC31072025230742",
+     "hops": 4,
+     "greedy_detention": 0,
+     "cpsat_detention": 0,
+     "greedy_transit": 78.4666666666667,
+     "cpsat_transit": 78.4666666666667
+    },
+    {
+     "id": "VZP IDBR31072025052533",
+     "hops": 4,
+     "greedy_detention": 0,
+     "cpsat_detention": 0,
+     "greedy_transit": 52.599999999999994,
+     "cpsat_transit": 52.599999999999994
+    },
+    {
+     "id": "VZP MAVB30072025153512",
+     "hops": 4,
+     "greedy_detention": 0,
+     "cpsat_detention": 0,
+     "greedy_transit": 78.46666666666664,
+     "cpsat_transit": 78.46666666666664
+    },
+    {
+     "id": "VZP MBMB29072025211419",
+     "hops": 15,
+     "greedy_detention": 117.91666666666674,
+     "cpsat_detention": 388.4166666666667,
+     "greedy_transit": 349.6833333333333,
+     "cpsat_transit": 620.1833333333334
+    },
+    {
+     "id": "VZP SCPM29072025123216",
+     "hops": 2,
+     "greedy_detention": 0,
+     "cpsat_detention": 0,
+     "greedy_transit": 25.65,
+     "cpsat_transit": 25.65
+    },
+    {
+     "id": "VZP TPSK31072025143328",
+     "hops": 4,
+     "greedy_detention": 0,
+     "cpsat_detention": 0,
+     "greedy_transit": 78.46666666666667,
+     "cpsat_transit": 78.46666666666667
+    },
+    {
+     "id": "VZP TPSK31072025210656",
+     "hops": 4,
+     "greedy_detention": 0,
+     "cpsat_detention": 0,
+     "greedy_transit": 78.4666666666667,
+     "cpsat_transit": 78.4666666666667
+    }
+   ]
+  }
+ }
+}

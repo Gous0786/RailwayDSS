@@ -276,7 +276,18 @@ def optimise(body: dict | None = None) -> JSONResponse:
                           time_limit_s=limit,
                           service_tolerance_min=tolerance,
                           closures=shut)
-    plan, report = Optimiser(graph, cfg).solve(window, fixed)
+
+    # "greedy" runs the baseline dispatcher instead: same graph, same rules,
+    # same verifier, no look-ahead. Everything downstream is unchanged, so
+    # the two are compared on identical terms rather than on separate paths
+    # through this handler.
+    mode = str(body.get("mode") or "optimal").lower()
+    if mode == "greedy":
+        from .greedy import GreedyDispatcher
+        plan, report = GreedyDispatcher(graph, cfg).solve(window, fixed)
+    else:
+        mode = "optimal"
+        plan, report = Optimiser(graph, cfg).solve(window, fixed)
 
     vcfg = VerifierConfig.load()
     vcfg.assume_unknown_line_fits = True
@@ -290,6 +301,7 @@ def optimise(body: dict | None = None) -> JSONResponse:
 
     return JSONResponse({
         "day": day.day,
+        "mode": mode,
         "window": [a, b],
         "offered": report.offered,
         "dispatched": report.dispatched,

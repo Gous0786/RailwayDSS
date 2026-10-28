@@ -30,6 +30,7 @@ pravah/                  the system
   demand.py              the rakes awaiting dispatch
   timetable.py           scheduled services as fixed obstacles
   optimise.py            CP-SAT freight path optimisation
+  greedy.py              the baseline: dispatch as soon as the road is clear
   verify.py              independent checking, and the KPIs
   plan.py                the contract between optimiser and verifier
   corridor.py            linear referencing: chainage -> geographic position
@@ -39,6 +40,7 @@ analysis/                one-shot builders and validators
   baseline.py            measured throughput baseline from the goods log
   build_freight_demand.py  inverts recorded movements into demand
   build_observed_freight.py  recorded freight paths, for the baseline overlay
+  compare_baseline.py    greedy dispatch against CP-SAT on identical inputs
   build_corridor.py      track geometry from cached OSM data
   build_linref.py        one chainage-addressable reference line
   build_basemap.py       offline basemap context layers
@@ -132,6 +134,77 @@ last arrival — a rake has cleared the section once it reaches its exit
 station, and what it does in the yard afterwards is not this section's
 business. `tests/test_observed.py` holds both invariants; both were written
 after the first version of this builder got them wrong.
+
+### What look-ahead actually buys
+
+Comparing a plan against the recorded day cannot isolate the scheduler's
+contribution, because the record contains yard work, crew changes and waiting
+for a path through the *next* section — none of which any scheduler here
+could remove. So there is a second baseline that can: `pravah/greedy.py`
+dispatches the same rakes first-come-first-served, sending each as soon as
+the road ahead is clear and never holding one back for a train that has not
+yet arrived.
+
+It shares the section graph, the running times, the signalling rules, the
+routing and the verifier with the optimiser. **Only the decision rule
+differs**, so every minute of difference is attributable to look-ahead. A
+greedy plan verifies just as clean as an optimised one — it loses on quality,
+never on legality, which is what makes it a fair baseline rather than a
+strawman.
+
+```bash
+python analysis/compare_baseline.py --limit 60 --closure VZM-NML:DN:480:720
+```
+
+On the busiest day, planning the full 24 hours. Every figure below comes from
+that one command, recorded in `data/derived/baseline_comparison.json`:
+
+| | greedy | CP-SAT | difference |
+|---|---|---|---|
+| dispatched | 99/112 | 100/112 | **+1** |
+| total detention, paired | 2496 min | 1498 min | **−40%** |
+| total transit, paired | 17678 min | 16681 min | −5.6% |
+| rakes running faster | — | 42 | |
+| rakes running slower | — | 9 | |
+| CP-SAT stage-1 gap | n/a | **0%** | |
+| solve time | 0.02 s | 122 s | |
+
+Totals are **paired** over the 99 rakes both schedulers dispatched. Comparing
+sums across different rake sets would reward whichever scheduler ran more
+trains, which is the thing being measured.
+
+**Throughput is not the headline on a clean day — detention is.** The two
+dispatch nearly the same number of rakes because the section has room: the
+busiest line runs near a third occupied, so there is slack for a poor plan to
+succeed in. What look-ahead buys is that the same trains run while stopping
+40% less. Stage 1 closes to 0%, so the 100 is a proven maximum, and the +1
+is all there is to win on throughput that day.
+
+### The same comparison under disruption
+
+Close `VZM-NML:DN` for the morning and the picture inverts:
+
+| | greedy | CP-SAT |
+|---|---|---|
+| dispatched | 84/112 | **87/112** |
+| total detention, paired (80 rakes) | 1869 min | 2687 min |
+| total transit, paired | 11157 min | 11975 min |
+| CP-SAT stage-1 gap | n/a | **8.0%** |
+
+CP-SAT clears three more rakes, and the rakes they both run take **7% longer**
+under CP-SAT. That is not a defect. The objective is lexicographic, so
+throughput is bought first and transit is minimised only within whatever
+throughput allows; squeezing extra rakes through a single line costs everyone
+else waiting, and the optimiser is instructed to pay that price. If that is
+the wrong trade for a real controller, it is the objective that should
+change, not the solver.
+
+**The stage-1 gap matters more than either number.** At 8% it never proved
+even the throughput figure — and it stays at roughly 8% when given 200 s per
+stage instead of 60, so this is not a budget that one more minute fixes.
+Under disruption the honest claim is *"at least 87"*, not *"the most
+possible"*. Stage 2 does not report at all under closure: the transit
+objective runs out of time before producing a bound.
 
 ### Disruption, and where crossings come from
 
