@@ -60,7 +60,8 @@ class Rake:
         """An empty plan for this rake; the optimiser fills in the movements."""
         return TrainPlan(id=self.id, train_class="FREIGHT",
                          direction=self.dir_enum, rake_length_m=self.length_m,
-                         priority=FREIGHT_PRIORITY)
+                         priority=FREIGHT_PRIORITY,
+                         wagon_type=self.wagon_type, loaded=self.loaded)
 
     @staticmethod
     def from_dict(d: dict) -> "Rake":

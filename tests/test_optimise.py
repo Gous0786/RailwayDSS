@@ -93,7 +93,13 @@ def test_movements_respect_the_technical_minimum(g, solved):
     for t in plan.trains:
         for mv in t.movements:
             d = g.direction_of(mv.from_station, mv.to_station)
-            minimum = g.running_time(mv.link, mv.line, "FREIGHT", d)
+            # The rake has to be named. Since the learned estimator answers
+            # per wagon family and load state, asking without naming one gets
+            # the block fallback, which is a DIFFERENT number - and comparing
+            # a plan against a minimum computed for some other rake is how
+            # this test failed the first time the estimator was wired in.
+            minimum = g.running_time(mv.link, mv.line, "FREIGHT", d,
+                                     wagon_type=t.wagon_type, loaded=t.loaded)
             assert mv.duration >= minimum - 1e-6
 
 

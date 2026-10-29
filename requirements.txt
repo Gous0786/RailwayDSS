@@ -6,8 +6,9 @@ websockets>=13.0        # live feed test client
 ortools>=9.15           # CP-SAT optimiser
 pytest>=8.0
 
-# Planned (see docs/PRAVAH_Synopsis.docx, section 6)
-# lightgbm>=4.3         # block traversal time estimator
-# scikit-learn>=1.5
-# pandas>=2.2
-# numpy>=1.26
+# Training the block traversal estimator: analysis/train_traversal.py.
+# NOT needed to run the optimiser or the service. Training happens offline
+# and leaves a lookup table behind (data/derived/traversal_model.json);
+# pravah/traversal.py reads that table and imports nothing from here.
+lightgbm>=4.3           # quantile regression on block traversal time
+numpy>=1.26

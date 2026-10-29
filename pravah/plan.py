@@ -103,6 +103,12 @@ class TrainPlan:
     direction: Direction
     rake_length_m: float = 650.0
     priority: int = 9
+    # What the rake is. Carried so the VERIFIER can ask the learned estimator
+    # the same question the planner asked it: if the plan was built on a
+    # 26-minute block and the check is made against a 31-minute constant, the
+    # check fails on every movement and the failure is the checker's.
+    wagon_type: str = ""
+    loaded: bool = True
     movements: list[Movement] = field(default_factory=list)
     holds: list[Hold] = field(default_factory=list)
     # Published timings, where the train has them. Used only to check that a
@@ -136,7 +142,8 @@ class TrainPlan:
     def to_dict(self) -> dict:
         return {"id": self.id, "class": self.train_class,
                 "dir": self.direction.value, "rake_length_m": self.rake_length_m,
-                "priority": self.priority,
+                "priority": self.priority, "wagon_type": self.wagon_type,
+                "loaded": self.loaded,
                 "movements": [m.to_dict() for m in self.movements],
                 "holds": [h.to_dict() for h in self.holds],
                 "scheduled": self.scheduled}
@@ -148,6 +155,8 @@ class TrainPlan:
             direction=Direction(d["dir"]),
             rake_length_m=float(d.get("rake_length_m", 650.0)),
             priority=int(d.get("priority", 9)),
+            wagon_type=str(d.get("wagon_type", "")),
+            loaded=bool(d.get("loaded", True)),
             movements=[Movement.from_dict(x) for x in d.get("movements", [])],
             holds=[Hold.from_dict(x) for x in d.get("holds", [])],
             scheduled=d.get("scheduled"))

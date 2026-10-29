@@ -89,7 +89,9 @@ DEFAULT_PRIORITY = 9
 #
 # Freight is the measured median running speed from 15,449 goods movements on
 # this corridor, not a permitted maximum: a loaded rake is cleared for 75 km/h
-# but does not achieve it. The learned estimator will replace this per block.
+# but does not achieve it. The learned estimator in traversal.py replaces this
+# per block where it has evidence; this stays as the fallback, and as what the
+# estimator had to beat (it does, by 31% on held-out days).
 CLASS_MAX_SPEED = {
     "VNDB": 125, "DRNT": 120, "GBR": 110, "AMTB": 120, "SUF": 125,
     "MEX": 120, "PEXP": 105, "PAS": 80, "MEMU": 75, "TOD": 110,
@@ -267,10 +269,14 @@ class SectionGraph:
     """Blocks, lines, capacities and timings for one railway section."""
 
     def __init__(self, stations: list[Station], links: dict[str, Link],
-                 psr: dict[str, SpeedRestriction]):
+                 psr: dict[str, SpeedRestriction], estimator=None):
         self.stations = stations
         self.links = links
         self.psr = psr
+        # The learned freight traversal times, if they have been trained.
+        # Optional on purpose: a fresh clone has no model and must still
+        # solve, on the constant speed model, exactly as it did before.
+        self.estimator = estimator
         self.closures: list[Closure] = []
         self._by_code = {s.code: s for s in stations}
         self._order = {s.code: i for i, s in enumerate(stations)}
@@ -416,7 +422,8 @@ class SectionGraph:
                 # keep the most restrictive
                 if cur is None or new.goods_kmph < cur.goods_kmph:
                     psr[lid] = new
-        return cls(stations, links, psr)
+        from .traversal import TraversalEstimator
+        return cls(stations, links, psr, TraversalEstimator.load())
 
     # ------------------------------------------------------------ queries
     def station(self, code: str) -> Station:
@@ -452,10 +459,28 @@ class SectionGraph:
 
     def running_time(self, link_id: str, line_name: str, train_class: str,
                      direction: Direction = Direction.DOWN,
-                     stops: bool = False) -> float:
-        """Minutes to traverse a line, honouring directional restrictions."""
+                     stops: bool = False, wagon_type: str = "",
+                     loaded: bool = True) -> float:
+        """Minutes to traverse a line, honouring directional restrictions.
+
+        For freight, the learned estimator answers this where it can. It
+        returns a figure that ALREADY includes the permanent speed
+        restriction, because the trains it learned from ran under that
+        restriction, so the PSR penalty below must not be added to it. Where
+        the estimator has never seen the combination it returns None and the
+        constant speed model answers instead, penalty and all.
+        """
         ln = self.line(link_id, line_name)
         freight = self.is_freight(train_class)
+        if freight and self.estimator is not None:
+            link = self.links[link_id]
+            a, b = ((link.a, link.b) if direction is Direction.DOWN
+                    else (link.b, link.a))
+            learned = self.estimator.minutes(
+                a, b, direction.value, wagon_type, loaded)
+            if learned is not None:
+                return learned + (ACCEL_ALLOWANCE_MIN + DECEL_ALLOWANCE_MIN
+                                  if stops else 0.0)
         speed = max(5.0, min(ln.max_speed_kmph or 999.0,
                              CLASS_MAX_SPEED.get(train_class.upper(),
                                                  DEFAULT_CLASS_SPEED)))

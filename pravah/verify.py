@@ -338,7 +338,9 @@ class Verifier:
                           (t.id,), mv.resource, mv.enter)
                 continue
             direction = self.g.direction_of(mv.from_station, mv.to_station)
-            minimum = self.g.running_time(mv.link, mv.line, t.train_class, direction)
+            minimum = self.g.running_time(mv.link, mv.line, t.train_class,
+                                          direction, wagon_type=t.wagon_type,
+                                          loaded=t.loaded)
             allowance = max(minimum * self.cfg.running_time_tolerance_pct / 100.0,
                             self.cfg.running_time_tolerance_min)
             floor = minimum - allowance
@@ -387,7 +389,12 @@ class Verifier:
                       f"{t.id} departs {h.station} before arriving",
                       (t.id,), h.resource, h.arrive)
             return
-        if 0 < h.duration < self.cfg.min_dwell_min:
+        # The epsilon is not cosmetic. Hold times arrive as solver seconds
+        # divided by 60, so a dwell the model constrained to exactly the
+        # minimum lands either side of it by about 5e-13 depending on the
+        # times involved, and an exact comparison reports a violation on
+        # roughly half of them. 1e-9 is the tolerance used throughout.
+        if 0 < h.duration < self.cfg.min_dwell_min - 1e-9:
             self._add(v, Kind.HOLD_INFEASIBLE,
                       f"{t.id} stands at {h.station} for {h.duration:.2f} min, "
                       f"below the {self.cfg.min_dwell_min} min minimum",

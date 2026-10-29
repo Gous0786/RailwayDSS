@@ -174,7 +174,7 @@ class GreedyDispatcher:
         return None
 
     # -------------------------------------------------------------- the run
-    def _legs(self, chain) -> list[_Leg]:
+    def _legs(self, chain, rake) -> list[_Leg]:
         out = []
         for link, line, a, b in chain:
             d = self.g.direction_of(a, b)
@@ -182,7 +182,9 @@ class GreedyDispatcher:
             out.append(_Leg(
                 link=link, line=line, a=a, b=b, direction=d,
                 tau=max(1.0, math.ceil(
-                    self.g.running_time(link, line, "FREIGHT", d) * SEC)),
+                    self.g.running_time(link, line, "FREIGHT", d,
+                                        wagon_type=rake.wagon_type,
+                                        loaded=rake.loaded) * SEC)),
                 headway=max(1.0, math.ceil(self.g.headway(link, line) * SEC)),
                 absolute=ln.signalling is Signalling.ABSOLUTE))
         return out
@@ -266,7 +268,7 @@ class GreedyDispatcher:
                 report.undispatched.append(rake.id)
                 continue
 
-            legs = self._legs(chain)
+            legs = self._legs(chain, rake)
             entries = self._place(rake, legs, ready, H1)
             if entries is None:
                 report.undispatched.append(rake.id)
@@ -305,6 +307,7 @@ class GreedyDispatcher:
             plans.append(TrainPlan(
                 id=rake.id, train_class="FREIGHT", direction=rake.dir_enum,
                 rake_length_m=rake.length_m, priority=FREIGHT_PRIORITY,
+                wagon_type=rake.wagon_type, loaded=rake.loaded,
                 movements=movements, holds=holds))
 
         report.dispatched = len(plans)

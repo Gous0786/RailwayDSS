@@ -184,6 +184,12 @@ class SolveReport:
     constraints: int = 0
     seconds: float = 0.0
     undispatched: list[str] = field(default_factory=list)
+    # Holds the extractor could not give a free line to. Should always be
+    # empty: the capacity constraints exist precisely so that a line is
+    # there to be found. A non-zero count means the model and the extractor
+    # disagree, which is worth seeing rather than discovering in the
+    # verifier's output two steps later.
+    crowded_holds: list[str] = field(default_factory=list)
 
     @property
     def ok(self) -> bool:
@@ -231,6 +237,7 @@ class Optimiser:
         # ---- fixed traffic occupies resources before freight is placed ----
         busy: dict[str, list[tuple[int, int]]] = {}
         self._station_busy: dict[str, list[tuple[float, float]]] = {}
+        fixed_holds: dict[str, list[tuple[int, int]]] = {}
         if fixed:
             for t in fixed.trains:
                 for mv in t.movements:
@@ -241,6 +248,8 @@ class Optimiser:
                 for h in t.holds:
                     self._station_busy.setdefault(h.resource, []).append(
                         (h.arrive, h.depart))
+                    fixed_holds.setdefault(h.station, []).append(
+                        (h.line, int(h.arrive * SEC), int(h.depart * SEC)))
 
         rakes: list[tuple[Rake, list, dict]] = []
         line_intervals: dict[str, list] = {}
@@ -266,7 +275,9 @@ class Optimiser:
             for link, line, a, b in chain:
                 d = self.g.direction_of(a, b)
                 tau = max(1, math.ceil(
-                    self.g.running_time(link, line, "FREIGHT", d) * SEC))
+                    self.g.running_time(link, line, "FREIGHT", d,
+                                        wagon_type=rake.wagon_type,
+                                        loaded=rake.loaded) * SEC))
                 resource = f"{link}:{line}"
                 enter = m.NewIntVar(H0, H1, f"in[{rake.id},{link}]")
                 leave = m.NewIntVar(H0, H1, f"out[{rake.id},{link}]")
@@ -400,6 +411,29 @@ class Optimiser:
             if len(intervals) > capacity:
                 m.AddCumulative(intervals, [1] * len(intervals), capacity)
 
+            # A scheduled service standing here is occupying a road too, and
+            # the constraint above does not know that: it reserves the whole
+            # station for freight. That is how the optimiser came to put four
+            # trains into Nellimarla's three roads under a closure - three
+            # freight, which it counted, and a passenger train it did not.
+            #
+            # Only the services standing on a road a goods rake could have
+            # used are counted, because only those are competing for one.
+            # Counting all of them against every line instead looks safer and
+            # is not: a passenger train on a platform too short for freight
+            # would consume capacity that the extractor can still see free,
+            # and the two would disagree about which station was full.
+            usable = {ln.number for ln in
+                      self.g.station(code).holding_lines(longest)}
+            standing = [(a, b) for line, a, b in fixed_holds.get(code, ())
+                        if line in usable]
+            if standing:
+                everyone = list(intervals) + [
+                    m.NewIntervalVar(a, max(1, b - a), b, f"fixed[{code},{i}]")
+                    for i, (a, b) in enumerate(standing)]
+                if len(everyone) > capacity:
+                    m.AddCumulative(everyone, [1] * len(everyone), capacity)
+
         report = SolveReport(offered=len(demand))
         if not presence:
             return Plan(label="empty", horizon=(cfg.horizon_start_min,
@@ -455,20 +489,100 @@ class Optimiser:
         return self._extract(best, rakes, report), report
 
     def _pick_hold_line(self, station: str, rake_m: float,
-                        arrive: float, depart: float) -> str:
-        """A line at this station that fits the rake and is free meanwhile."""
+                        arrive: float, depart: float) -> str | None:
+        """A line at this station that fits the rake and is free meanwhile.
+
+        None where there is none. It used to answer "1" in that case, which
+        put two trains on the same road and left the verifier to find it.
+        """
         for ln in self.g.station(station).holding_lines(rake_m):
             key = f"{station}:{ln.number}"
             taken = self._station_busy.get(key, [])
             if not any(arrive < b and a < depart for a, b in taken):
                 self._station_busy.setdefault(key, []).append((arrive, depart))
                 return ln.number
-        return "1"
+        return None
+
+    # Enough to settle any station on this corridor many times over. The
+    # bound exists so that a pathological case degrades into a reported
+    # failure rather than a service that stops responding.
+    _SEARCH_NODES = 20000
+
+    def _assign_lines(self, station: str, items: list, report: SolveReport):
+        """Give every rake standing at one station a road of its own.
+
+        Longest hold first, because those are the hardest to place and
+        placing them last is what fails. Backtracking from there, so that a
+        rake which could sit anywhere gives up its road to one which could
+        not. Roads already taken by scheduled services are fixed and are
+        read from the occupancy seeded before the solve.
+        """
+        order = sorted(items, key=lambda x: (-(x[1] - x[0]), x[0], x[2]))
+        options = []
+        for arrive, depart, rake_id, _at, length_m in order:
+            free = []
+            for ln in self.g.station(station).holding_lines(length_m):
+                busy = self._station_busy.get(f"{station}:{ln.number}", ())
+                if not any(arrive < b and a < depart for a, b in busy):
+                    free.append(ln.number)
+            options.append(free)
+
+        placed: dict[int, str] = {}
+        budget = [self._SEARCH_NODES]
+
+        def fits(i: int, line: str) -> bool:
+            a0, b0 = order[i][0], order[i][1]
+            for j, ln in placed.items():
+                if ln != line:
+                    continue
+                a1, b1 = order[j][0], order[j][1]
+                if a0 < b1 and a1 < b0:
+                    return False
+            return True
+
+        def search(i: int) -> bool:
+            if i == len(order):
+                return True
+            if budget[0] <= 0:
+                return False
+            budget[0] -= 1
+            for line in options[i]:
+                if not fits(i, line):
+                    continue
+                placed[i] = line
+                if search(i + 1):
+                    return True
+                del placed[i]
+            return False
+
+        if not search(0):
+            # No complete assignment. Place what can be placed and say which
+            # could not, rather than quietly doubling a rake onto an occupied
+            # road and leaving the verifier to discover it.
+            placed.clear()
+            for i, (arrive, depart, rake_id, _at, length_m) in enumerate(order):
+                for line in options[i]:
+                    if fits(i, line):
+                        placed[i] = line
+                        break
+                else:
+                    report.crowded_holds.append(f"{rake_id}@{station}")
+                    placed[i] = self.g.station(station).holding_lines(
+                        length_m)[0].number
+
+        out = []
+        for i, (arrive, depart, rake_id, _at, _length) in enumerate(order):
+            line = placed[i]
+            self._station_busy.setdefault(f"{station}:{line}", []).append(
+                (arrive, depart))
+            out.append((rake_id, line, arrive, depart))
+        return out
 
     # ------------------------------------------------------------- extract
     def _extract(self, solver, rakes, report: SolveReport) -> Plan:
         """Read the chosen schedule back out of the solver."""
         plans: list[TrainPlan] = []
+        pending: list[tuple[float, float, str, str, float]] = []
         for rake, z, legs, holds in rakes:
             if not solver.BooleanValue(z):
                 report.undispatched.append(rake.id)
@@ -480,7 +594,6 @@ class Optimiser:
                          for link, line, a, b, enter, leave in legs]
             arrival_at = {mv.to_station: mv.exit for mv in movements}
 
-            held = []
             for at, dur, _flag in holds.values():
                 seconds = solver.Value(dur)
                 if seconds <= 0:
@@ -488,18 +601,42 @@ class Optimiser:
                 arrive = arrival_at.get(at)
                 if arrive is None:
                     continue
-                depart = arrive + seconds / SEC
-                # Cumulative decided how many rakes may stand here, not which
-                # line each takes. Pick one that fits and is not already
-                # occupied by a scheduled service or an earlier rake.
-                line = self._pick_hold_line(at, rake.length_m, arrive, depart)
-                held.append(Hold(rake.id, at, line, arrive, depart,
-                                 "precedence", PRECEDENCE))
+                pending.append((arrive, arrive + seconds / SEC, rake.id, at,
+                                rake.length_m))
 
             plans.append(TrainPlan(
                 id=rake.id, train_class="FREIGHT", direction=rake.dir_enum,
                 rake_length_m=rake.length_m, priority=12,
-                movements=movements, holds=held))
+                wagon_type=rake.wagon_type, loaded=rake.loaded,
+                movements=movements, holds=[]))
+
+        # Which road each standing train takes is decided here, for a whole
+        # station at a time, because taking them one at a time does not work.
+        #
+        # The cumulative above is a RELAXATION: it bounds how many trains may
+        # stand at a station at once, which is necessary but not sufficient.
+        # Scheduled services are already on specific roads and cannot move,
+        # and a one-minute passenger stop can fragment a road for the whole
+        # of a three-hour goods hold. NML has shown exactly this - a rake
+        # wanting 411-584 with road 3 taken by another rake, road 2 blocked
+        # by a passenger train for one minute at 438 and road 1 blocked for
+        # one minute at 582. No road free throughout, three roads, and a
+        # valid assignment available all the same by moving the OTHER rake.
+        #
+        # First-fit cannot find that, in any order, because the fixed stops
+        # pre-colour the roads. Searching can, and the search is tiny: a
+        # handful of roads and a handful of holds per station.
+        by_id = {t.id: t for t in plans}
+        at_station: dict[str, list] = {}
+        for item in sorted(pending):
+            at_station.setdefault(item[3], []).append(item)
+
+        for at, items in at_station.items():
+            for rake_id, line, arrive, depart in self._assign_lines(at, items,
+                                                                    report):
+                by_id[rake_id].holds.append(
+                    Hold(rake_id, at, line, arrive, depart,
+                         "precedence", PRECEDENCE))
 
         report.dispatched = len(plans)
         return Plan(trains=plans,

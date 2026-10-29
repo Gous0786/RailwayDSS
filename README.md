@@ -33,6 +33,7 @@ pravah/                  the system
   greedy.py              the baseline: dispatch as soon as the road is clear
   verify.py              independent checking, and the KPIs
   plan.py                the contract between optimiser and verifier
+  traversal.py           learned freight block times, read as a lookup table
   corridor.py            linear referencing: chainage -> geographic position
   replay.py              simulation clock and train-state source
   api.py                 service: REST, websocket feed, optimise endpoint
@@ -41,6 +42,9 @@ analysis/                one-shot builders and validators
   build_freight_demand.py  inverts recorded movements into demand
   build_observed_freight.py  recorded freight paths, for the baseline overlay
   compare_baseline.py    greedy dispatch against CP-SAT on identical inputs
+  build_traversal_dataset.py  block crossings from the goods log, for training
+  train_traversal.py     quantile regression on block traversal time
+  estimator_impact.py    what the learned times are worth, in trains
   build_corridor.py      track geometry from cached OSM data
   build_linref.py        one chainage-addressable reference line
   build_basemap.py       offline basemap context layers
@@ -59,7 +63,7 @@ config/verifier.toml     every verification threshold
 data/
   ktv-psa/               official ICMS infrastructure and schedule extracts
   osm/                   derived corridor geometry and basemap
-  derived/               demand, calibration, evaluation
+  derived/               demand, calibration, evaluation, the learned table
 docs/
   make_synopsis.py       generates the project synopsis
 ```
@@ -161,48 +165,64 @@ that one command, recorded in `data/derived/baseline_comparison.json`:
 
 | | greedy | CP-SAT | difference |
 |---|---|---|---|
-| dispatched | 99/112 | 100/112 | **+1** |
-| total detention, paired | 2496 min | 1498 min | **−40%** |
-| total transit, paired | 17678 min | 16681 min | −5.6% |
-| rakes running faster | — | 42 | |
-| rakes running slower | — | 9 | |
+| dispatched | 100/112 | 101/112 | **+1** |
+| total detention, paired | 1440 min | 1624 min | +12.8% |
+| total transit, paired | 14087 min | 14272 min | +1.3% |
+| rakes running faster | — | 30 | |
+| rakes running slower | — | 57 | |
 | CP-SAT stage-1 gap | n/a | **0%** | |
-| solve time | 0.02 s | 122 s | |
+| CP-SAT stage-2 gap | n/a | 10% | |
+| solve time | 0.03 s | 126 s | |
 
-Totals are **paired** over the 99 rakes both schedulers dispatched. Comparing
+Totals are **paired** over the 100 rakes both schedulers dispatched. Comparing
 sums across different rake sets would reward whichever scheduler ran more
 trains, which is the thing being measured.
 
-**Throughput is not the headline on a clean day — detention is.** The two
-dispatch nearly the same number of rakes because the section has room: the
-busiest line runs near a third occupied, so there is slack for a poor plan to
-succeed in. What look-ahead buys is that the same trains run while stopping
-40% less. Stage 1 closes to 0%, so the 100 is a proven maximum, and the +1
-is all there is to win on throughput that day.
+**On a clean day, look-ahead is now worth one train and nothing else — and
+that is the learned estimator's doing.** Against the old constant speed model
+these same two schedulers differed by 40% of detention in CP-SAT's favour. Giving
+both of them accurate per-block running times cut greedy's detention from
+2496 to 1440 minutes and left CP-SAT's roughly where it was, which wiped the
+advantage out. Most of what look-ahead used to buy on a quiet day was
+repairing damage the running times had caused.
+
+What remains is real but narrow: **stage 1 closes to 0%, so 101 is a proven
+maximum** and greedy's 100 is provably one short. The 12.8% more detention is
+the price of that extra rake, paid by the other hundred, and it is the
+lexicographic objective behaving exactly as instructed — throughput first,
+everything else within what throughput allows.
+
+The gap is not a time budget problem. At **240 s per stage** instead of 60 —
+495 seconds of solving — stage 2 still reports 10% and detention still sits
+8.9% above greedy. The optimiser is not being cut off early; on a section
+with this much slack there is genuinely very little left to win.
 
 ### The same comparison under disruption
 
-Close `VZM-NML:DN` for the morning and the picture inverts:
+Close `VZM-NML:DN` for the morning and look-ahead earns its keep:
 
 | | greedy | CP-SAT |
 |---|---|---|
-| dispatched | 84/112 | **87/112** |
-| total detention, paired (80 rakes) | 1869 min | 2687 min |
-| total transit, paired | 11157 min | 11975 min |
-| CP-SAT stage-1 gap | n/a | **8.0%** |
+| dispatched | 92/112 | **99/112** |
+| total detention, paired (92 rakes) | 3256 min | 4724 min |
+| total transit, paired | 13894 min | 15362 min |
+| CP-SAT stage-1 gap | n/a | **2.0%** |
 
-CP-SAT clears three more rakes, and the rakes they both run take **7% longer**
-under CP-SAT. That is not a defect. The objective is lexicographic, so
-throughput is bought first and transit is minimised only within whatever
-throughput allows; squeezing extra rakes through a single line costs everyone
-else waiting, and the optimiser is instructed to pay that price. If that is
-the wrong trade for a real controller, it is the objective that should
-change, not the solver.
+**This is where the optimiser is worth having.** It clears seven more rakes
+than first-come-first-served — against one on a clean day — because once a
+line is withdrawn the section has no slack left to absorb a poor decision.
+Greedy sends a rake into a block that will be needed by something it cannot
+see yet, and under closure there is no second path to recover with.
 
-**The stage-1 gap matters more than either number.** At 8% it never proved
-even the throughput figure — and it stays at roughly 8% when given 200 s per
-stage instead of 60, so this is not a budget that one more minute fixes.
-Under disruption the honest claim is *"at least 87"*, not *"the most
+The rakes they both run take **10.6% longer** under CP-SAT, and that is not a
+defect. The objective is lexicographic: throughput is bought first and
+transit minimised only within whatever throughput allows. Squeezing seven
+more rakes through a single line costs everyone else waiting, and the
+optimiser is instructed to pay that price. If that is the wrong trade for a
+real controller, it is the objective that should change, not the solver.
+
+**The stage-1 gap is the honest caveat.** At 2% this run did not quite prove
+the throughput figure, so the claim is *"at least 99"*, not *"the most
 possible"*. Stage 2 does not report at all under closure: the transit
 objective runs out of time before producing a bound.
 
@@ -503,6 +523,83 @@ Two findings came out of the sweep instead:
   for planning. But it ranges 0.68 to 1.59 by block, and closing that spread is
   exactly the learned estimator's job. This report is the baseline it has to beat.
 
+## The learned traversal estimator
+
+The constant model crosses every freight block at 31 km/h — one number for 24
+blocks, two directions, nineteen wagon families and a loaded flag. This
+replaces it with a figure learned per block from 15,126 recorded goods
+crossings.
+
+```bash
+python analysis/build_traversal_dataset.py   # -> data/derived/traversal_dataset.json
+python analysis/train_traversal.py           # -> data/derived/traversal_model.json
+```
+
+**The target is the 20th percentile, not the mean, and that is the whole
+design.** On KUK–VZM, 10.65 km, the recorded crossings run p10 20 min, p50 49,
+p90 154, max 642. A 10 km block does not take ten hours to run — everything
+above the low quantile is a rake standing inside it. The optimiser schedules
+those conflicts itself, so handing it an average means handing it the queue a
+second time and inventing congestion that is not there.
+
+There are two ways to make that mistake and neither raises an error. The
+other is the permanent speed restriction: these times were measured from
+trains running *under* it, so the learned figure replaces the constant model
+including its PSR penalty. Adding the recorded penalty on top would count it
+twice, and it would land on KUK–VZM, which is both the restricted block and
+the one the plan usually turns on.
+
+### What it is worth, on seven days no model saw
+
+Pinball loss at p20, train on 1–15 August, tune on 16–20, report on 21–27.
+The split is **by day, never by row** — one consignment crosses up to 21
+blocks in an afternoon, so shuffling rows puts the same rake's other blocks in
+train and test together and the score measures memory.
+
+| contender | p20 pinball | |
+|---|---|---|
+| constant (31 km/h + PSR) | 3.555 | what it replaces |
+| per-block lookup | 2.478 | a table, no model |
+| **cell — LightGBM, shipped** | **2.459** | block, direction, family, load |
+| full — plus hour, commodity, axle | 2.470 | worse |
+
+**−30.8% against the constant model, +0.8% against a plain lookup table.**
+That second figure is the honest one about the machine learning: nearly all of
+the gain is in knowing *which block*, which a table knows too. Conditioning on
+the rake adds a little, and it shows up where the physics says it should — on
+KUK–VZM a loaded rake needs **4 minutes more at p20** than an empty one, +4.0
+in the training days and +4.0 again in the held-out week.
+
+The richer feature set is *worse*, which is the useful negative result. Before
+tuning, `hour of entry` took 23% of the split gain — it was proxying
+congestion, exactly the thing that must not reach a minimum-running-time
+model. Tuned properly it falls to 2% and the feature set earns nothing.
+
+Because the richer features did not pay for themselves, the estimator **ships
+as a 658-row lookup table**. Training is offline; `pravah/traversal.py` imports
+nothing from lightgbm, the solver loads no model, and a controller can read
+every number in it. A clone that has never trained still runs — the estimator
+is absent, and the constant model answers as before.
+
+### What it is worth in trains
+
+```bash
+python analysis/estimator_impact.py --day 2025-08-23 --closure VZM-NML:DN:480:720
+```
+
+On **23 August — a day the estimator never saw**, 101 rakes offered:
+
+| | constant | learned | |
+|---|---|---|---|
+| clean day, dispatched | 81 | **85** | +4 |
+| clean day, detention | 1252 min | **244 min** | −81% |
+| under closure, dispatched | 71 | **84** | +13 |
+
+Zero violations in every arm. The constant model gave KUK–VZM 31.8 minutes to
+every rake; the learned p20 is 27.4 loaded and 23.5 empty. Being wrong in that
+direction does not make plans safer, it makes the section look fuller than it
+is — and the capacity that frees up is largest exactly when capacity is scarce.
+
 ## Verification
 
 Nothing the optimiser produces is believed until something else has checked
@@ -550,6 +647,37 @@ The 7 that remain are a genuine calibration finding: the KUK–VZM permanent
 speed restriction records a 337-second penalty, so the model budgets 10.7
 minutes where the railway schedules 9.0. The recorded penalty looks
 worst-case. Worth confirming before the optimiser plans conservatively there.
+
+### Three defects the estimator flushed out
+
+Wiring in the learned times changed which plans the solver reaches, and that
+exposed three bugs in how standing trains are given a road. All three were
+**pre-existing**, all three only appear under closure, and all three are
+intermittent — the same scenario run three times gave 0, 1 and 2 violations.
+A single clean run had been taken as evidence, and it was not.
+
+- **Scheduled services did not count against station capacity.** The
+  constraint reserved the whole station for freight, so the optimiser put
+  four trains into Nellimarla's three roads: three goods, which it counted,
+  and a passenger train it did not.
+- **A dwell of exactly the minimum failed an exact float compare.** Hold
+  times are solver seconds divided by 60, so a dwell pinned to the 0.5 min
+  minimum lands either side of it by about 5e-13. Roughly half were reported
+  as infeasible. The verifier's own 1e-9 tolerance now applies.
+- **Roads were handed out one rake at a time.** Choosing which road each
+  standing train takes is interval-graph colouring, and scheduled stops
+  pre-colour it. A rake wanting 411–584 at Nellimarla found road 3 taken,
+  road 2 blocked by a one-minute passenger stop at 438 and road 1 blocked for
+  one minute at 582 — no road free throughout, three roads, and a valid
+  assignment available all the same by moving the *other* rake. First-fit
+  cannot find that in any order. It is a bounded backtracking search now,
+  longest hold first, and what it cannot place it reports in
+  `SolveReport.crowded_holds` rather than doubling a rake onto an occupied
+  road and leaving the verifier to find it.
+
+`tests/test_holds.py` pins all three against the assignment directly rather
+than through a solve, because a test that reproduces the bug in one run of
+two is not a test.
 
 ## Data
 
